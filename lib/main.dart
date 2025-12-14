@@ -4,8 +4,6 @@ import 'screens/signup_screen.dart';
 import 'screens/forgot_password_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/saved_screen.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'widgets/welcome_dialog.dart';
 import 'services/favorites_service.dart';
 
 void main() {
@@ -26,26 +24,6 @@ class _MyAppState extends State<MyApp> {
   @override
   void initState() {
     super.initState();
-    _checkFirstRun();
-  }
-
-  // Check SharedPreferences to determine if welcome dialog should be shown
-  Future<void> _checkFirstRun() async {
-    final prefs = await SharedPreferences.getInstance();
-    final seen = prefs.getBool('seen_welcome') ?? false;
-    if (!seen && mounted) {
-      // Show after first frame so context is available
-      WidgetsBinding.instance.addPostFrameCallback((_) async {
-        await showDialog(
-          context: context,
-          barrierDismissible: false,
-          builder: (_) => WelcomeDialog(onClose: () async {
-            Navigator.of(context).pop();
-            await prefs.setBool('seen_welcome', true);
-          }),
-        );
-      });
-    }
   }
 
   @override

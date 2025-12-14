@@ -286,9 +286,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
       height: 50,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        border: Border.all(color: Colors.grey[300]!, width: 1),
-      ),
-      child: Icon(icon, color: Colors.grey[600], size: 24),
+  
     );
   }
 }
