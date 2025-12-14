@@ -3,8 +3,10 @@ import 'screens/login_screen.dart';
 import 'screens/signup_screen.dart';
 import 'screens/forgot_password_screen.dart';
 import 'screens/home_screen.dart';
+import 'screens/saved_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'widgets/welcome_dialog.dart';
+import 'services/favorites_service.dart';
 
 void main() {
   runApp(const MyApp());
@@ -19,7 +21,8 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
-  // track whether we've checked preferences
+  // Create a single instance of FavoritesService to share across the app
+  final favoritesService = FavoritesService();
 
   @override
   void initState() {
@@ -68,7 +71,8 @@ class _MyAppState extends State<MyApp> {
         '/forgot-password': (context) => ForgotPasswordScreen(
               onBackToLogin: () => Navigator.pop(context),
             ),
-        '/home': (context) => const HomeScreen(),
+        '/home': (context) => HomeScreen(favoritesService: favoritesService),
+        '/saved': (context) => SavedScreen(favoritesService: favoritesService),
       },
     );
   }
