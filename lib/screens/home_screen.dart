@@ -10,9 +10,7 @@ import '../widgets/available_item_tile.dart';
 import '../services/favorites_service.dart';
 
 class HomeScreen extends StatefulWidget {
-  final FavoritesService favoritesService;
-
-  const HomeScreen({required this.favoritesService, super.key});
+  const HomeScreen({super.key});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -20,6 +18,8 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
+  // Access the singleton FavoritesService instance
+  final FavoritesService favoritesService = FavoritesService();
 
   void _onNavItemTapped(int index) {
     if (index == _selectedIndex) return;
@@ -133,9 +133,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 scrollDirection: Axis.horizontal,
                 child: Row(
                   children: [
-                    GiveAwayCard('Base Camp Tent', 4.9, widget.favoritesService),
-                    GiveAwayCard('Google Pixel Tablet', 4.1, widget.favoritesService),
-                    GiveAwayCard('Stainless Pot', 4.0, widget.favoritesService),
+                    GiveAwayCard('Base Camp Tent', 4.9, favoritesService),
+                    GiveAwayCard('Google Pixel Tablet', 4.1, favoritesService),
+                    GiveAwayCard('Stainless Pot', 4.0, favoritesService),
                   ],
                 ),
               ),
@@ -145,11 +145,11 @@ class _HomeScreenState extends State<HomeScreen> {
               // to FavoritesService. Tap the heart to save to Saved screen.
               const Text('Available now', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
               const SizedBox(height: 12),
-              AvailableItemTile('Craftsman Cordless Drill', '4.0 km away • 4.9 ★', widget.favoritesService),
+              AvailableItemTile('Craftsman Cordless Drill', '4.0 km away • 4.9 ★', favoritesService),
               const SizedBox(height: 12),
-              AvailableItemTile('Office Chair', '2.5 km away • 4.3 ★', widget.favoritesService),
+              AvailableItemTile('Office Chair', '2.5 km away • 4.3 ★', favoritesService),
               const SizedBox(height: 12),
-              AvailableItemTile('Portable Speaker', '3.2 km away • 4.5 ★', widget.favoritesService),
+              AvailableItemTile('Portable Speaker', '3.2 km away • 4.5 ★', favoritesService),
             ],
           ),
         ),

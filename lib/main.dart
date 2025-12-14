@@ -21,8 +21,7 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
-  // Create a single instance of FavoritesService to share across the app
-  final favoritesService = FavoritesService();
+  // FavoritesService is now a singleton, accessible globally via FavoritesService()
 
   @override
   void initState() {
@@ -71,8 +70,8 @@ class _MyAppState extends State<MyApp> {
         '/forgot-password': (context) => ForgotPasswordScreen(
               onBackToLogin: () => Navigator.pop(context),
             ),
-        '/home': (context) => HomeScreen(favoritesService: favoritesService),
-        '/saved': (context) => SavedScreen(favoritesService: favoritesService),
+        '/home': (context) => const HomeScreen(),
+        '/saved': (context) => SavedScreen(favoritesService: FavoritesService()),
       },
     );
   }

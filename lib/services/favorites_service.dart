@@ -6,10 +6,24 @@ import 'package:flutter/material.dart';
 /// screens and widgets can listen for changes and rebuild when favorites are
 /// added or removed.
 ///
+/// Implemented as a singleton so it's accessible anywhere in the app without
+/// needing to pass it through constructors.
+///
 /// In a real app, you'd persist this to local storage (shared_preferences) or
 /// a backend database. For now, it lives in memory during the app session.
 
 class FavoritesService with ChangeNotifier {
+  // Singleton instance
+  static final FavoritesService _instance = FavoritesService._internal();
+
+  // Private constructor
+  FavoritesService._internal();
+
+  // Factory constructor to return the singleton
+  factory FavoritesService() {
+    return _instance;
+  }
+
   // Store favorites as a Set of item titles (or IDs in a real app).
   final Set<String> _favorites = {};
 
