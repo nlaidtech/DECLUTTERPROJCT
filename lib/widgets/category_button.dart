@@ -23,7 +23,7 @@ class CategoryButton extends StatelessWidget {
             width: 70,
             height: 70,
             decoration: BoxDecoration(
-              color: color.withOpacity(0.2),
+              color: color.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(16),
             ),
             child: Icon(icon, color: color, size: 32),

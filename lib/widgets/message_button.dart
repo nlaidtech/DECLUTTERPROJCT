@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 
-class MyWidget extends StatefulWidget {
-  const MyWidget({super.key});
+class MessageButton extends StatefulWidget {
+  const MessageButton({super.key});
 
   @override
-  State<MyWidget> createState() => _MyWidgetState();
+  State<MessageButton> createState() => _MessageButtonState();
 }
 
-class _MyWidgetState extends State<MyWidget>
+class _MessageButtonState extends State<MessageButton>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
 
@@ -25,10 +25,6 @@ class _MyWidgetState extends State<MyWidget>
 
   @override
   Widget build(BuildContext context) {
-    return const Placeholder(
-
-
-
-    );
+    return const Placeholder();
   }
 }
