@@ -42,10 +42,9 @@ class _HomeScreenState extends State<HomeScreen> {
         );
         break;
       case 3:
-        // Messages - placeholder
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Messages feature coming soon!')),
-        );
+        // Messages - navigate to message screen
+        Navigator.pushNamed(context, '/message');
+        setState(() => _selectedIndex = 0); // Reset tab after navigation
         break;
       case 4:
         // Profile - placeholder
