@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../services/auth_service.dart';
 
 // Sign Up Screen Widget - Handles new user account creation
 class SignUpScreen extends StatefulWidget {
@@ -23,6 +24,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
   bool _obscureConfirmPassword = true;
   bool _isLoading = false;
 
+  // Auth service instance
+  final _authService = AuthService();
+
   @override
   void dispose() {
     // Clean up controllers to prevent memory leaks
@@ -34,7 +38,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
   }
 
   // Handle sign up button press
-  void _signUp() {
+  Future<void> _signUp() async {
     // Validate all fields are filled
     if (_nameController.text.isEmpty ||
         _emailController.text.isEmpty ||
@@ -50,16 +54,40 @@ class _SignUpScreenState extends State<SignUpScreen> {
       return;
     }
 
+    // Validate password length
+    if (_passwordController.text.length < 6) {
+      _showSnackBar('Password must be at least 6 characters');
+      return;
+    }
+
     // Show loading state
     setState(() => _isLoading = true);
 
-    // Simulate sign up delay (replace with actual API call)
-    Future.delayed(const Duration(seconds: 2), () {
+    try {
+      // Create account and save to database
+      await _authService.signUpWithEmail(
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
+        name: _nameController.text.trim(),
+      );
+
       if (mounted) {
         setState(() => _isLoading = false);
-        _showSnackBar('Account created successfully');
+        _showSnackBar('Account created successfully!');
+        
+        // Navigate to home screen
+        Future.delayed(const Duration(seconds: 1), () {
+          if (mounted) {
+            Navigator.pushReplacementNamed(context, '/home');
+          }
+        });
       }
-    });
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        _showSnackBar(e.toString());
+      }
+    }
   }
 
   // Helper method to display snackbar messages

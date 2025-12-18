@@ -1,9 +1,11 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 /// Firebase Authentication Service
 /// Handles user sign up, login, logout, and password reset
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseFirestore _db = FirebaseFirestore.instance;
 
   // Get current user
   User? get currentUser => _auth.currentUser;
@@ -15,12 +17,25 @@ class AuthService {
   Future<UserCredential?> signUpWithEmail({
     required String email,
     required String password,
+    required String name,
   }) async {
     try {
+      // Create user account in Firebase Auth
       final credential = await _auth.createUserWithEmailAndPassword(
         email: email,
         password: password,
       );
+
+      // Save user data to Firestore database
+      if (credential.user != null) {
+        await _db.collection('users').doc(credential.user!.uid).set({
+          'email': email,
+          'name': name,
+          'createdAt': FieldValue.serverTimestamp(),
+          'location': 'Panabo',
+        });
+      }
+
       return credential;
     } on FirebaseAuthException catch (e) {
       throw _handleAuthException(e);
@@ -33,6 +48,18 @@ class AuthService {
     required String password,
   }) async {
     try {
+      // First verify user exists in Firestore database
+      final querySnapshot = await _db
+          .collection('users')
+          .where('email', isEqualTo: email)
+          .limit(1)
+          .get();
+
+      if (querySnapshot.docs.isEmpty) {
+        throw 'No account found. Please sign up first.';
+      }
+
+      // If user exists in database, proceed with authentication
       final credential = await _auth.signInWithEmailAndPassword(
         email: email,
         password: password,
@@ -40,6 +67,8 @@ class AuthService {
       return credential;
     } on FirebaseAuthException catch (e) {
       throw _handleAuthException(e);
+    } catch (e) {
+      throw e.toString();
     }
   }
 

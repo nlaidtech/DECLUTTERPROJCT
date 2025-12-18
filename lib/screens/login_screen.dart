@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../services/auth_service.dart';
 
 // Login Screen Widget - Handles user authentication with email and password
 class LoginScreen extends StatefulWidget {
@@ -22,6 +23,9 @@ class _LoginScreenState extends State<LoginScreen> {
   // State variable to track login loading state
   bool _isLoading = false;
 
+  // Auth service instance
+  final _authService = AuthService();
+
   @override
   void dispose() {
     // Clean up controllers when widget is disposed to prevent memory leaks
@@ -31,7 +35,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   // Handle login button press
-  void _login() {
+  Future<void> _login() async {
     // Validate email and password are not empty
     if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
       _showSnackBar('Please fill in all fields');
@@ -41,15 +45,25 @@ class _LoginScreenState extends State<LoginScreen> {
     // Show loading state
     setState(() => _isLoading = true);
 
-    // Simulate login delay (replace with actual API call)
-    Future.delayed(const Duration(seconds: 2), () {
+    try {
+      // Sign in with email and password
+      await _authService.signInWithEmail(
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
+      );
+
       if (mounted) {
         setState(() => _isLoading = false);
-        _showSnackBar('Login successful');
+        _showSnackBar('Login successful!');
         // Navigate to home screen after successful login
-        Navigator.pushNamed(context, '/home');
+        Navigator.pushReplacementNamed(context, '/home');
       }
-    });
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        _showSnackBar(e.toString());
+      }
+    }
   }
 
   // Helper method to display snackbar messages
