@@ -5,11 +5,7 @@ import '../widgets/available_item_tile.dart';
 import '../services/favorites_service.dart';
 import 'create_post_screen.dart';
 
-/// ---------- COLOR SYSTEM ----------
-const Color primaryGreen = Color(0xFF4CAF50);
-const Color lightGreen = Color(0xFFE8F5E9);
-const Color accentOrange = Color(0xFFFF9800);
-const Color background = Color(0xFFF4F7F5);
+
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -46,7 +42,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: background,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
 
       // ---------------- APP BAR ----------------
       appBar: AppBar(
@@ -55,7 +51,7 @@ class _HomeScreenState extends State<HomeScreen> {
         title: const Text(
           'Declutter',
           style: TextStyle(
-            color: primaryGreen,
+            color: Theme.of(context).primaryColor,
             fontWeight: FontWeight.bold,
             fontSize: 22,
           ),
@@ -87,8 +83,11 @@ class _HomeScreenState extends State<HomeScreen> {
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF4CAF50), Color(0xFF66BB6A)],
+                gradient: LinearGradient(
+                  colors: [
+                    Theme.of(context).primaryColor,
+                    Theme.of(context).primaryColor.withOpacity(0.8)
+                  ],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
@@ -125,11 +124,11 @@ class _HomeScreenState extends State<HomeScreen> {
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: primaryGreen.withOpacity(0.3)),
+                border: Border.all(color: Theme.of(context).primaryColor.withOpacity(0.3)),
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.search, color: primaryGreen),
+                  Icon(Icons.search, color: Theme.of(context).primaryColor),
                   const SizedBox(width: 12),
                   Text(
                     'Search items near you',
@@ -151,9 +150,9 @@ class _HomeScreenState extends State<HomeScreen> {
               scrollDirection: Axis.horizontal,
               child: Row(
                 children: const [
-                  CategoryButton('Sports', Icons.directions_bike, primaryGreen),
+                  CategoryButton('Sports', Icons.directions_bike, Theme.of(context).primaryColor),
                   CategoryButton('Electronics', Icons.electrical_services, Colors.purple),
-                  CategoryButton('Tools', Icons.build, accentOrange),
+                  CategoryButton('Tools', Icons.build, Theme.of(context).colorScheme.secondary),
                   CategoryButton('Furniture', Icons.chair, Colors.blue),
                 ],
               ),
@@ -165,7 +164,7 @@ class _HomeScreenState extends State<HomeScreen> {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: lightGreen,
+                color: Theme.of(context).primaryColor.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Column(
@@ -185,7 +184,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         onPressed: () {},
                         child: const Text(
                           'View all',
-                          style: TextStyle(color: primaryGreen),
+                          style: TextStyle(color: Theme.of(context).primaryColor),
                         ),
                       ),
                     ],
@@ -213,7 +212,7 @@ class _HomeScreenState extends State<HomeScreen> {
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
-                color: accentOrange,
+                color: Theme.of(context).colorScheme.secondary,
               ),
             ),
             const SizedBox(height: 12),
@@ -242,7 +241,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
       // ---------- FLOATING ADD BUTTON ----------
       floatingActionButton: FloatingActionButton.extended(
-        backgroundColor: primaryGreen,
+        backgroundColor: Theme.of(context).primaryColor,
         onPressed: () {
           Navigator.push(
             context,
@@ -323,7 +322,7 @@ class _NavIcon extends StatelessWidget {
       onPressed: onTap,
       icon: Icon(
         isActive ? icon : outlinedIcon,
-        color: isActive ? primaryGreen : Colors.grey.shade400,
+        color: isActive ? Theme.of(context).primaryColor : Colors.grey.shade400,
       ),
     );
   }

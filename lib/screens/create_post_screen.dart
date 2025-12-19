@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../services/database_service.dart';
 
 class CreatePostScreen extends StatefulWidget {
   const CreatePostScreen({super.key});
@@ -39,20 +40,62 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
     );
   }
 
-  void _publishPost() {
+  Future<void> _publishPost() async {
     if (_formKey.currentState!.validate()) {
-      // Here you would normally send data to backend
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Post published successfully!'),
-          backgroundColor: Color(0xFF4CAF50),
-        ),
-      );
-      
-      // Return to previous screen
-      Future.delayed(const Duration(seconds: 1), () {
-        Navigator.pop(context);
-      });
+      try {
+        // Show loading indicator
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => const Center(
+            child: CircularProgressIndicator(),
+          ),
+        );
+
+        // Determine post type based on category
+        final postType = _selectedCategory == 'Give Away' ? 'giveaway' : 'available';
+
+        // Save post to database
+        await DatabaseService().createPost(
+          title: _titleController.text.trim(),
+          description: _descriptionController.text.trim(),
+          category: _selectedCategory,
+          location: _locationController.text.trim(),
+          type: postType,
+          imageUrls: _selectedImages,
+        );
+
+        // Hide loading indicator
+        if (mounted) Navigator.pop(context);
+
+        // Show success message
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Post published successfully!'),
+              backgroundColor: Color(0xFF4CAF50),
+            ),
+          );
+
+          // Return to previous screen
+          Future.delayed(const Duration(seconds: 1), () {
+            if (mounted) Navigator.pop(context);
+          });
+        }
+      } catch (e) {
+        // Hide loading indicator
+        if (mounted) Navigator.pop(context);
+
+        // Show error message
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error publishing post: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
     }
   }
 

@@ -78,13 +78,13 @@ class _LoginScreenState extends State<LoginScreen> {
     return Scaffold(
       // AppBar with Declutter title and back button
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          icon: Icon(Icons.arrow_back, color: Theme.of(context).iconTheme.color),
           onPressed: () {},
         ),
-        title: const Text('Declutter', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+        title: Text('Declutter', style: Theme.of(context).appBarTheme.titleTextStyle),
         centerTitle: false,
       ),
       body: SingleChildScrollView(
@@ -131,7 +131,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       Checkbox(
                         value: true,
                         onChanged: (_) {},
-                        activeColor: Colors.green,
+                        activeColor: Theme.of(context).primaryColor,
                       ),
                       const Text('Remember me', style: TextStyle(fontSize: 13)),
                     ],
@@ -141,7 +141,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     onPressed: () => Navigator.pushNamed(context, '/forgot-password'),
                     child: const Text(
                       'Forgot Password',
-                      style: TextStyle(color: Colors.green, fontSize: 13),
+                      style: TextStyle(color: Theme.of(context).primaryColor, fontSize: 13),
                     ),
                   ),
                 ],
@@ -155,8 +155,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 child: ElevatedButton(
                   onPressed: _isLoading ? null : _login,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                    padding: const EdgeInsets.symmetric(vertical: 0),
                   ),
                   child: _isLoading
                       ? const SizedBox(
@@ -202,7 +201,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       onTap: widget.onSwitchToSignUp,
                       child: const Text(
                         'Sign Up here',
-                        style: TextStyle(color: Colors.green, fontWeight: FontWeight.w600, fontSize: 13),
+                        style: TextStyle(color: Theme.of(context).primaryColor, fontWeight: FontWeight.w600, fontSize: 13),
                       ),
                     ),
                   ],
@@ -245,6 +244,8 @@ class _LoginScreenState extends State<LoginScreen> {
               borderSide: BorderSide(color: Colors.grey[300]!),
             ),
             contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            filled: true,
+            fillColor: Colors.grey[50],
           ),
         ),
       ],
@@ -278,6 +279,8 @@ class _LoginScreenState extends State<LoginScreen> {
               borderSide: BorderSide(color: Colors.grey[300]!),
             ),
             contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            filled: true,
+            fillColor: Colors.grey[50],
           ),
         ),
       ],
