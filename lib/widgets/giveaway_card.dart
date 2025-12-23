@@ -10,8 +10,17 @@ class GiveAwayCard extends StatelessWidget {
   final String title;
   final double rating;
   final FavoritesService favoritesService;
+  final VoidCallback? onTap;
+  final String? imageUrl;
 
-  const GiveAwayCard(this.title, this.rating, this.favoritesService, {super.key});
+  const GiveAwayCard(
+    this.title,
+    this.rating,
+    this.favoritesService, {
+    super.key,
+    this.onTap,
+    this.imageUrl,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -21,59 +30,122 @@ class GiveAwayCard extends StatelessWidget {
       listenable: favoritesService,
       builder: (context, _) {
         final isFavorited = favoritesService.isFavorite(title);
-        return Container(
-          width: 160,
-          margin: const EdgeInsets.only(right: 12),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 8)],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: double.infinity,
-                height: 100,
-                decoration: BoxDecoration(
-                  color: Colors.grey[200],
-                  borderRadius: const BorderRadius.only(topLeft: Radius.circular(16), topRight: Radius.circular(16)),
+        return GestureDetector(
+          onTap: onTap,
+          child: Container(
+            width: 160,
+            margin: const EdgeInsets.only(right: 12),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.1),
+                  blurRadius: 8,
                 ),
-                child: Icon(Icons.image, color: Colors.grey[400], size: 40),
-              ),
-              Padding(
-                padding: const EdgeInsets.all(12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(title, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13), maxLines: 2),
-                    const SizedBox(height: 8),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Row(
-                          children: [
-                            Icon(Icons.star, size: 14, color: Colors.amber[600]),
-                            const SizedBox(width: 4),
-                            Text(rating.toString(), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
-                          ],
-                        ),
-                        // Heart icon calls favoritesService.toggleFavorite() when tapped.
-                        // The icon updates instantly via ListenableBuilder rebuild.
-                        IconButton(
-                          icon: Icon(
-                            isFavorited ? Icons.favorite : Icons.favorite_border,
-                            size: 18,
-                            color: isFavorited ? Colors.red : Colors.grey[400],
-                          ),
-                          onPressed: () => favoritesService.toggleFavorite(title),
-                        ),
-                      ],
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: double.infinity,
+                  height: 100,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[200],
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(16),
+                      topRight: Radius.circular(16),
                     ),
-                  ],
+                  ),
+                  child: imageUrl != null && imageUrl!.isNotEmpty
+                      ? ClipRRect(
+                          borderRadius: const BorderRadius.only(
+                            topLeft: Radius.circular(16),
+                            topRight: Radius.circular(16),
+                          ),
+                          child: Image.network(
+                            imageUrl!,
+                            width: double.infinity,
+                            height: 100,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) => Icon(
+                              Icons.image,
+                              color: Colors.grey[400],
+                              size: 40,
+                            ),
+                            loadingBuilder: (context, child, loadingProgress) {
+                              if (loadingProgress == null) return child;
+                              return Center(
+                                child: CircularProgressIndicator(
+                                  value:
+                                      loadingProgress.expectedTotalBytes != null
+                                      ? loadingProgress.cumulativeBytesLoaded /
+                                            loadingProgress.expectedTotalBytes!
+                                      : null,
+                                ),
+                              );
+                            },
+                          ),
+                        )
+                      : Icon(Icons.image, color: Colors.grey[400], size: 40),
                 ),
-              ),
-            ],
+                Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 13,
+                        ),
+                        maxLines: 2,
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.star,
+                                size: 14,
+                                color: Colors.amber[600],
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                rating.toString(),
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
+                          // Heart icon calls favoritesService.toggleFavorite() when tapped.
+                          // The icon updates instantly via ListenableBuilder rebuild.
+                          IconButton(
+                            icon: Icon(
+                              isFavorited
+                                  ? Icons.favorite
+                                  : Icons.favorite_border,
+                              size: 18,
+                              color: isFavorited
+                                  ? Colors.red
+                                  : Colors.grey[400],
+                            ),
+                            onPressed: () =>
+                                favoritesService.toggleFavorite(title),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
         );
       },

@@ -8,6 +8,8 @@ import 'screens/forgot_password_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/saved_screen.dart';
 import 'screens/conversations_screen.dart';
+import 'screens/profile_screen.dart';
+import 'screens/search_screen.dart';
 import 'services/favorites_service.dart';
 
 void main() async {
@@ -56,6 +58,8 @@ class _MyAppState extends State<MyApp> {
         '/home': (context) => const HomeScreen(),
         '/saved': (context) => SavedScreen(favoritesService: FavoritesService()),
         '/message': (context) => const ConversationsScreen(),
+        '/profile': (context) => const ProfileScreen(),
+        '/search': (context) => const SearchScreen(),
       },
     );
   }

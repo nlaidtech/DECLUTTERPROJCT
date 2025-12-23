@@ -5,7 +5,7 @@ import '../services/auth_service.dart';
 class LoginScreen extends StatefulWidget {
   // Callback function to switch to sign up screen
   final VoidCallback onSwitchToSignUp;
-  
+
   const LoginScreen({super.key, required this.onSwitchToSignUp});
 
   @override
@@ -16,10 +16,10 @@ class _LoginScreenState extends State<LoginScreen> {
   // Text controllers to manage email and password input
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  
+
   // State variable to toggle password visibility
   bool _obscurePassword = true;
-  
+
   // State variable to track login loading state
   bool _isLoading = false;
 
@@ -68,9 +68,9 @@ class _LoginScreenState extends State<LoginScreen> {
 
   // Helper method to display snackbar messages
   void _showSnackBar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   @override
@@ -80,11 +80,11 @@ class _LoginScreenState extends State<LoginScreen> {
       appBar: AppBar(
         backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
         elevation: 0,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: Theme.of(context).iconTheme.color),
-          onPressed: () {},
+      
+        title: Text(
+          'Declutter',
+          style: Theme.of(context).appBarTheme.titleTextStyle,
         ),
-        title: Text('Declutter', style: Theme.of(context).appBarTheme.titleTextStyle),
         centerTitle: false,
       ),
       body: SingleChildScrollView(
@@ -138,10 +138,14 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   // Forgot password link - Navigates to forgot password screen
                   TextButton(
-                    onPressed: () => Navigator.pushNamed(context, '/forgot-password'),
-                    child: const Text(
+                    onPressed: () =>
+                        Navigator.pushNamed(context, '/forgot-password'),
+                    child: Text(
                       'Forgot Password',
-                      style: TextStyle(color: Theme.of(context).primaryColor, fontSize: 13),
+                      style: TextStyle(
+                        color: Theme.of(context).primaryColor,
+                        fontSize: 13,
+                      ),
                     ),
                   ),
                 ],
@@ -162,20 +166,41 @@ class _LoginScreenState extends State<LoginScreen> {
                           height: 24,
                           width: 24,
                           child: CircularProgressIndicator(
-                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Colors.white,
+                            ),
                             strokeWidth: 2,
                           ),
                         )
                       : const Text(
                           'Login',
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.white),
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                          ),
                         ),
                 ),
               ),
 
               // Divider
               const SizedBox(height: 24),
-              Row(children: [Expanded(child: Container(height: 1, color: Colors.grey[300])), const SizedBox(width: 16), Text('Or Continue With Account', style: TextStyle(color: Colors.grey[600], fontSize: 12)), const SizedBox(width: 16), Expanded(child: Container(height: 1, color: Colors.grey[300]))]),
+              Row(
+                children: [
+                  Expanded(
+                    child: Container(height: 1, color: Colors.grey[300]),
+                  ),
+                  const SizedBox(width: 16),
+                  Text(
+                    'Or Continue With Account',
+                    style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Container(height: 1, color: Colors.grey[300]),
+                  ),
+                ],
+              ),
 
               // Social login buttons
               const SizedBox(height: 24),
@@ -196,12 +221,19 @@ class _LoginScreenState extends State<LoginScreen> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text("Don't have an account? ", style: TextStyle(color: Colors.grey[600], fontSize: 13)),
+                    Text(
+                      "Don't have an account? ",
+                      style: TextStyle(color: Colors.grey[600], fontSize: 13),
+                    ),
                     GestureDetector(
                       onTap: widget.onSwitchToSignUp,
-                      child: const Text(
+                      child: Text(
                         'Sign Up here',
-                        style: TextStyle(color: Theme.of(context).primaryColor, fontWeight: FontWeight.w600, fontSize: 13),
+                        style: TextStyle(
+                          color: Theme.of(context).primaryColor,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 13,
+                        ),
                       ),
                     ),
                   ],
@@ -225,7 +257,10 @@ class _LoginScreenState extends State<LoginScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // Field label
-        Text(label, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+        Text(
+          label,
+          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+        ),
         const SizedBox(height: 8),
         // Text input with icon
         TextField(
@@ -243,7 +278,10 @@ class _LoginScreenState extends State<LoginScreen> {
               borderRadius: BorderRadius.circular(12),
               borderSide: BorderSide(color: Colors.grey[300]!),
             ),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 14,
+            ),
             filled: true,
             fillColor: Colors.grey[50],
           ),
@@ -257,7 +295,10 @@ class _LoginScreenState extends State<LoginScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('Password', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+        const Text(
+          'Password',
+          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+        ),
         const SizedBox(height: 8),
         TextField(
           controller: _passwordController,
@@ -265,8 +306,12 @@ class _LoginScreenState extends State<LoginScreen> {
           decoration: InputDecoration(
             prefixIcon: Icon(Icons.lock_outlined, color: Colors.grey[600]),
             suffixIcon: IconButton(
-              icon: Icon(_obscurePassword ? Icons.visibility_off : Icons.visibility, color: Colors.grey[600]),
-              onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+              icon: Icon(
+                _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                color: Colors.grey[600],
+              ),
+              onPressed: () =>
+                  setState(() => _obscurePassword = !_obscurePassword),
             ),
             hintText: 'Password',
             hintStyle: TextStyle(color: Colors.grey[400]),
@@ -278,7 +323,10 @@ class _LoginScreenState extends State<LoginScreen> {
               borderRadius: BorderRadius.circular(12),
               borderSide: BorderSide(color: Colors.grey[300]!),
             ),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 14,
+            ),
             filled: true,
             fillColor: Colors.grey[50],
           ),

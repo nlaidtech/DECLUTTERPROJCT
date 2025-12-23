@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:file_picker/file_picker.dart';
+import 'dart:io';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import '../services/database_service.dart';
+import '../services/storage_service.dart';
 
 class CreatePostScreen extends StatefulWidget {
   const CreatePostScreen({super.key});
@@ -13,10 +17,10 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
   final _locationController = TextEditingController();
-  
+
   String _selectedCategory = 'Give Away';
   final List<String> _categories = ['Give Away', 'Available Now'];
-  final List<String> _selectedImages = [];
+  final List<PlatformFile> _selectedImages = [];
 
   @override
   void dispose() {
@@ -26,63 +30,164 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
     super.dispose();
   }
 
-  void _addPhoto() {
-    // Simulate photo picker
+  Future<void> _addPhoto() async {
+    try {
+      FilePickerResult? result = await FilePicker.platform.pickFiles(
+        type: FileType.image,
+        allowMultiple: false,
+        withData: true, // Important for web
+      );
+
+      if (result != null && result.files.isNotEmpty) {
+        setState(() {
+          _selectedImages.add(result.files.first);
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Photo added! (${_selectedImages.length} total)'),
+            duration: const Duration(seconds: 1),
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error picking image: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  void _removePhoto(int index) {
     setState(() {
-      _selectedImages.add('photo_${_selectedImages.length + 1}.jpg');
+      _selectedImages.removeAt(index);
     });
-    
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Photo added! (In real app, this would open image picker)'),
-        duration: Duration(seconds: 2),
-      ),
-    );
   }
 
   Future<void> _publishPost() async {
     if (_formKey.currentState!.validate()) {
+      // Show confirmation if no images
+      if (_selectedImages.isEmpty) {
+        final confirm = await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('No Images'),
+            content: const Text(
+              'Post without images? It may get less attention.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text('Continue'),
+              ),
+            ],
+          ),
+        );
+        if (confirm != true) return;
+      }
+
       try {
-        // Show loading indicator
+        print('Starting post creation...');
+
+        // Show loading indicator with progress
+        int uploadProgress = 0;
         showDialog(
           context: context,
           barrierDismissible: false,
-          builder: (context) => const Center(
-            child: CircularProgressIndicator(),
+          builder: (context) => StatefulBuilder(
+            builder: (context, setState) => Center(
+              child: Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const CircularProgressIndicator(),
+                    const SizedBox(height: 16),
+                    Text(
+                      _selectedImages.isEmpty
+                          ? 'Creating post...'
+                          : uploadProgress == 0
+                          ? 'Starting upload...'
+                          : 'Uploading $uploadProgress/${_selectedImages.length} images...',
+                      style: const TextStyle(fontSize: 16),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ),
         );
 
         // Determine post type based on category
-        final postType = _selectedCategory == 'Give Away' ? 'giveaway' : 'available';
+        final postType = _selectedCategory == 'Give Away'
+            ? 'giveaway'
+            : 'available';
+
+        print('Post type: $postType, Category: $_selectedCategory');
+        print('Title: ${_titleController.text.trim()}');
+        print('Number of images: ${_selectedImages.length}');
+
+        // Upload images to Firebase Storage in parallel (much faster!)
+        List<String> imageUrls = [];
+        if (_selectedImages.isNotEmpty) {
+          final storageService = StorageService();
+
+          // Upload all images at once instead of one by one
+          final uploadFutures = _selectedImages.asMap().entries.map((entry) {
+            final index = entry.key;
+            final image = entry.value;
+            return storageService.uploadPostImage(
+              image,
+              'post_${DateTime.now().millisecondsSinceEpoch}_$index',
+            );
+          }).toList();
+
+          // Wait for all uploads to complete
+          imageUrls = await Future.wait(uploadFutures);
+          print('All images uploaded successfully');
+        }
 
         // Save post to database
-        await DatabaseService().createPost(
+        final postId = await DatabaseService().createPost(
           title: _titleController.text.trim(),
           description: _descriptionController.text.trim(),
           category: _selectedCategory,
           location: _locationController.text.trim(),
           type: postType,
-          imageUrls: _selectedImages,
+          imageUrls: imageUrls,
         );
+
+        print('Post created successfully with ID: $postId');
 
         // Hide loading indicator
         if (mounted) Navigator.pop(context);
 
-        // Show success message
+        // Show success message and return to home screen
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('Post published successfully!'),
               backgroundColor: Color(0xFF4CAF50),
+              duration: Duration(seconds: 2),
             ),
           );
 
-          // Return to previous screen
-          Future.delayed(const Duration(seconds: 1), () {
-            if (mounted) Navigator.pop(context);
-          });
+          // Return to home screen (it will auto-refresh via StreamBuilder)
+          Navigator.pop(context);
         }
       } catch (e) {
+        print('Error creating post: $e');
+
         // Hide loading indicator
         if (mounted) Navigator.pop(context);
 
@@ -92,6 +197,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
             SnackBar(
               content: Text('Error publishing post: $e'),
               backgroundColor: Colors.red,
+              duration: const Duration(seconds: 4),
             ),
           );
         }
@@ -136,10 +242,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                 children: [
                   const Text(
                     'Photos',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                   ),
                   const SizedBox(height: 12),
                   SizedBox(
@@ -163,7 +266,10 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                Icon(Icons.add_a_photo, color: Colors.grey[600]),
+                                Icon(
+                                  Icons.add_a_photo,
+                                  color: Colors.grey[600],
+                                ),
                                 const SizedBox(height: 4),
                                 Text(
                                   'Add Photo',
@@ -177,53 +283,77 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                           ),
                         ),
                         // Selected Images
-                        ..._selectedImages.map((image) => Container(
-                          width: 100,
-                          margin: const EdgeInsets.only(left: 8),
-                          decoration: BoxDecoration(
-                            color: Colors.grey[200],
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Stack(
-                            children: [
-                              Center(
-                                child: Icon(Icons.image, size: 40, color: Colors.grey[400]),
-                              ),
-                              Positioned(
-                                top: 4,
-                                right: 4,
-                                child: GestureDetector(
-                                  onTap: () {
-                                    setState(() {
-                                      _selectedImages.remove(image);
-                                    });
-                                  },
-                                  child: Container(
-                                    padding: const EdgeInsets.all(4),
-                                    decoration: const BoxDecoration(
-                                      color: Colors.red,
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: const Icon(
-                                      Icons.close,
-                                      size: 16,
-                                      color: Colors.white,
+                        ..._selectedImages.asMap().entries.map((entry) {
+                          final index = entry.key;
+                          final image = entry.value;
+                          return Container(
+                            width: 100,
+                            height: 100,
+                            margin: const EdgeInsets.only(left: 8),
+                            decoration: BoxDecoration(
+                              color: Colors.grey[200],
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Stack(
+                              children: [
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(8),
+                                  child: kIsWeb
+                                      ? (image.bytes != null
+                                            ? Image.memory(
+                                                image.bytes!,
+                                                width: 100,
+                                                height: 100,
+                                                fit: BoxFit.cover,
+                                              )
+                                            : Icon(
+                                                Icons.image,
+                                                color: Colors.grey[400],
+                                              ))
+                                      : (image.path != null
+                                            ? Image.file(
+                                                File(image.path!),
+                                                width: 100,
+                                                height: 100,
+                                                fit: BoxFit.cover,
+                                              )
+                                            : Icon(
+                                                Icons.image,
+                                                color: Colors.grey[400],
+                                              )),
+                                ),
+                                Positioned(
+                                  top: 4,
+                                  right: 4,
+                                  child: GestureDetector(
+                                    onTap: () => _removePhoto(index),
+                                    child: Container(
+                                      padding: const EdgeInsets.all(4),
+                                      decoration: const BoxDecoration(
+                                        color: Colors.red,
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: const Icon(
+                                        Icons.close,
+                                        size: 16,
+                                        color: Colors.white,
+                                      ),
                                     ),
                                   ),
                                 ),
-                              ),
-                            ],
-                          ),
-                        )),
+                              ],
+                            ),
+                          );
+                        }),
                       ],
                     ),
                   ),
                 ],
               ),
             ),
-            
+
             const SizedBox(height: 16),
-            
+
             // Item Title
             TextFormField(
               controller: _titleController,
@@ -248,9 +378,9 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                 return null;
               },
             ),
-            
+
             const SizedBox(height: 16),
-            
+
             // Description
             TextFormField(
               controller: _descriptionController,
@@ -276,9 +406,9 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                 return null;
               },
             ),
-            
+
             const SizedBox(height: 16),
-            
+
             // Category Selection
             Container(
               padding: const EdgeInsets.all(16),
@@ -292,10 +422,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                 children: [
                   const Text(
                     'Category',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                   ),
                   const SizedBox(height: 12),
                   Wrap(
@@ -312,8 +439,12 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                         },
                         selectedColor: const Color(0xFF4CAF50).withOpacity(0.2),
                         labelStyle: TextStyle(
-                          color: isSelected ? const Color(0xFF4CAF50) : Colors.grey[700],
-                          fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                          color: isSelected
+                              ? const Color(0xFF4CAF50)
+                              : Colors.grey[700],
+                          fontWeight: isSelected
+                              ? FontWeight.w600
+                              : FontWeight.normal,
                         ),
                       );
                     }).toList(),
@@ -321,9 +452,9 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                 ],
               ),
             ),
-            
+
             const SizedBox(height: 16),
-            
+
             // Location
             TextFormField(
               controller: _locationController,
@@ -349,9 +480,9 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                 return null;
               },
             ),
-            
+
             const SizedBox(height: 24),
-            
+
             // Publish Button
             ElevatedButton(
               onPressed: _publishPost,
@@ -366,10 +497,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
               ),
               child: const Text(
                 'Publish Post',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                ),
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
               ),
             ),
           ],

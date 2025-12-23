@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../widgets/category_button.dart';
 import '../widgets/giveaway_card.dart';
 import '../widgets/available_item_tile.dart';
 import '../services/favorites_service.dart';
+import '../services/database_service.dart';
 import 'create_post_screen.dart';
-
-
+import 'view_all_screen.dart';
+import 'item_detail_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -17,6 +19,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
   final FavoritesService favoritesService = FavoritesService();
+  final DatabaseService _databaseService = DatabaseService();
 
   void _onNavItemTapped(int index) {
     if (index == _selectedIndex) return;
@@ -32,9 +35,7 @@ class _HomeScreenState extends State<HomeScreen> {
         Navigator.pushNamed(context, '/message');
         break;
       case 4:
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Profile feature coming soon')),
-        );
+        Navigator.pushNamed(context, '/profile');
         break;
     }
   }
@@ -48,7 +49,7 @@ class _HomeScreenState extends State<HomeScreen> {
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-        title: const Text(
+        title: Text(
           'Declutter',
           style: TextStyle(
             color: Theme.of(context).primaryColor,
@@ -62,10 +63,7 @@ class _HomeScreenState extends State<HomeScreen> {
             child: Center(
               child: Text(
                 'PANABO',
-                style: TextStyle(
-                  color: Colors.grey.shade600,
-                  fontSize: 12,
-                ),
+                style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
               ),
             ),
           ),
@@ -78,7 +76,6 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-
             // ---------- HERO SECTION ----------
             Container(
               padding: const EdgeInsets.all(20),
@@ -86,7 +83,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 gradient: LinearGradient(
                   colors: [
                     Theme.of(context).primaryColor,
-                    Theme.of(context).primaryColor.withOpacity(0.8)
+                    Theme.of(context).primaryColor.withOpacity(0.8),
                   ],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
@@ -95,8 +92,8 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: const [
-                  Text(
+                children: [
+                  const Text(
                     'Declutter your space',
                     style: TextStyle(
                       fontSize: 30,
@@ -104,13 +101,10 @@ class _HomeScreenState extends State<HomeScreen> {
                       color: Colors.white,
                     ),
                   ),
-                  SizedBox(height: 8),
-                  Text(
+                  const SizedBox(height: 8),
+                  const Text(
                     'Give items a second life',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.white70,
-                    ),
+                    style: TextStyle(fontSize: 14, color: Colors.white70),
                   ),
                 ],
               ),
@@ -119,22 +113,32 @@ class _HomeScreenState extends State<HomeScreen> {
             const SizedBox(height: 20),
 
             // ---------- SEARCH BAR ----------
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: Theme.of(context).primaryColor.withOpacity(0.3)),
-              ),
-              child: Row(
-                children: [
-                  Icon(Icons.search, color: Theme.of(context).primaryColor),
-                  const SizedBox(width: 12),
-                  Text(
-                    'Search items near you',
-                    style: TextStyle(color: Colors.grey.shade600),
+            GestureDetector(
+              onTap: () {
+                Navigator.pushNamed(context, '/search');
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 14,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(
+                    color: Theme.of(context).primaryColor.withOpacity(0.3),
                   ),
-                ],
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.search, color: Theme.of(context).primaryColor),
+                    const SizedBox(width: 12),
+                    Text(
+                      'Search items near you',
+                      style: TextStyle(color: Colors.grey.shade600),
+                    ),
+                  ],
+                ),
               ),
             ),
 
@@ -149,11 +153,23 @@ class _HomeScreenState extends State<HomeScreen> {
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: Row(
-                children: const [
-                  CategoryButton('Sports', Icons.directions_bike, Theme.of(context).primaryColor),
-                  CategoryButton('Electronics', Icons.electrical_services, Colors.purple),
-                  CategoryButton('Tools', Icons.build, Theme.of(context).colorScheme.secondary),
-                  CategoryButton('Furniture', Icons.chair, Colors.blue),
+                children: [
+                  CategoryButton(
+                    'Sports',
+                    Icons.directions_bike,
+                    Theme.of(context).primaryColor,
+                  ),
+                  const CategoryButton(
+                    'Electronics',
+                    Icons.electrical_services,
+                    Colors.purple,
+                  ),
+                  CategoryButton(
+                    'Tools',
+                    Icons.build,
+                    Theme.of(context).colorScheme.secondary,
+                  ),
+                  const CategoryButton('Furniture', Icons.chair, Colors.blue),
                 ],
               ),
             ),
@@ -181,24 +197,100 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       ),
                       TextButton(
-                        onPressed: () {},
-                        child: const Text(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const ViewAllScreen(
+                                categoryTitle: 'Give Away',
+                                categoryType: 'giveaway',
+                              ),
+                            ),
+                          );
+                        },
+                        child: Text(
                           'View all',
-                          style: TextStyle(color: Theme.of(context).primaryColor),
+                          style: TextStyle(
+                            color: Theme.of(context).primaryColor,
+                          ),
                         ),
                       ),
                     ],
                   ),
                   const SizedBox(height: 12),
-                  SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Row(
-                      children: [
-                        GiveAwayCard('Base Camp Tent', 4.9, favoritesService),
-                        GiveAwayCard('Google Pixel Tablet', 4.1, favoritesService),
-                        GiveAwayCard('Stainless Pot', 4.0, favoritesService),
-                      ],
+                  StreamBuilder<QuerySnapshot>(
+                    stream: _databaseService.getPosts(
+                      type: 'giveaway',
+                      status: 'active',
                     ),
+                    builder: (context, snapshot) {
+                      if (snapshot.hasError) {
+                        print('Giveaway error: ${snapshot.error}');
+                        return Padding(
+                          padding: const EdgeInsets.all(20.0),
+                          child: Text(
+                            'Error: ${snapshot.error}',
+                            style: const TextStyle(
+                              color: Colors.red,
+                              fontSize: 12,
+                            ),
+                          ),
+                        );
+                      }
+
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const Center(child: CircularProgressIndicator());
+                      }
+
+                      final posts = snapshot.data?.docs ?? [];
+
+                      if (posts.isEmpty) {
+                        return const Padding(
+                          padding: EdgeInsets.all(20.0),
+                          child: Text(
+                            'No giveaway items yet. Be the first to post!',
+                            style: TextStyle(color: Colors.grey),
+                          ),
+                        );
+                      }
+
+                      return SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Row(
+                          children: posts.take(5).map((doc) {
+                            final data = doc.data() as Map<String, dynamic>;
+                            final title = data['title'] ?? 'Untitled';
+                            final rating = (data['rating'] ?? 0.0).toDouble();
+                            final location = data['location'] ?? 'Unknown';
+                            final imageUrls = List<String>.from(
+                              data['imageUrls'] ?? [],
+                            );
+                            final imageUrl = imageUrls.isNotEmpty
+                                ? imageUrls.first
+                                : null;
+
+                            return GiveAwayCard(
+                              title,
+                              rating,
+                              favoritesService,
+                              imageUrl: imageUrl,
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => ItemDetailScreen(
+                                      itemTitle: title,
+                                      rating: rating,
+                                      location: location,
+                                    ),
+                                  ),
+                                );
+                              },
+                            );
+                          }).toList(),
+                        ),
+                      );
+                    },
                   ),
                 ],
               ),
@@ -207,31 +299,109 @@ class _HomeScreenState extends State<HomeScreen> {
             const SizedBox(height: 28),
 
             // ---------- AVAILABLE NOW ----------
-            const Text(
-              'Available now',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context).colorScheme.secondary,
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Available now',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).colorScheme.secondary,
+                  ),
+                ),
+                TextButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const ViewAllScreen(
+                          categoryTitle: 'Available Now',
+                          categoryType: 'available',
+                        ),
+                      ),
+                    );
+                  },
+                  child: Text(
+                    'View all',
+                    style: TextStyle(color: Theme.of(context).primaryColor),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            StreamBuilder<QuerySnapshot>(
+              stream: _databaseService.getPosts(
+                type: 'available',
+                status: 'active',
               ),
-            ),
-            const SizedBox(height: 12),
-            AvailableItemTile(
-              'Craftsman Cordless Drill',
-              '4.0 km away • 4.9 ★',
-              favoritesService,
-            ),
-            const SizedBox(height: 12),
-            AvailableItemTile(
-              'Office Chair',
-              '2.5 km away • 4.3 ★',
-              favoritesService,
-            ),
-            const SizedBox(height: 12),
-            AvailableItemTile(
-              'Portable Speaker',
-              '3.2 km away • 4.5 ★',
-              favoritesService,
+              builder: (context, snapshot) {
+                if (snapshot.hasError) {
+                  print('Available error: ${snapshot.error}');
+                  return Padding(
+                    padding: const EdgeInsets.all(20.0),
+                    child: Text(
+                      'Error: ${snapshot.error}',
+                      style: const TextStyle(color: Colors.red, fontSize: 12),
+                    ),
+                  );
+                }
+
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+
+                final posts = snapshot.data?.docs ?? [];
+
+                if (posts.isEmpty) {
+                  return const Padding(
+                    padding: EdgeInsets.all(20.0),
+                    child: Text(
+                      'No available items yet. Post something to share!',
+                      style: TextStyle(color: Colors.grey),
+                    ),
+                  );
+                }
+
+                return Column(
+                  children: posts.take(3).map((doc) {
+                    final data = doc.data() as Map<String, dynamic>;
+                    final title = data['title'] ?? 'Untitled';
+                    final rating = (data['rating'] ?? 0.0).toDouble();
+                    final location = data['location'] ?? 'Unknown';
+                    final subtitle =
+                        '$location • ${rating.toStringAsFixed(1)} ★';
+                    final imageUrls = List<String>.from(
+                      data['imageUrls'] ?? [],
+                    );
+                    final imageUrl = imageUrls.isNotEmpty
+                        ? imageUrls.first
+                        : null;
+
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 12.0),
+                      child: AvailableItemTile(
+                        title,
+                        subtitle,
+                        favoritesService,
+                        imageUrl: imageUrl,
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => ItemDetailScreen(
+                                itemTitle: title,
+                                rating: rating,
+                                location: location,
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    );
+                  }).toList(),
+                );
+              },
             ),
 
             const SizedBox(height: 120),
@@ -245,18 +415,13 @@ class _HomeScreenState extends State<HomeScreen> {
         onPressed: () {
           Navigator.push(
             context,
-            MaterialPageRoute(
-              builder: (_) => const CreatePostScreen(),
-            ),
+            MaterialPageRoute(builder: (_) => const CreatePostScreen()),
           );
         },
         icon: const Icon(Icons.add, color: Colors.white),
         label: const Text(
           'Post Item',
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-          ),
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,

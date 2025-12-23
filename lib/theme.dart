@@ -6,13 +6,15 @@ class AppTheme {
   static const Color primaryGreen = Color(0xFF4CAF50);
   static const Color primaryDark = Color(0xFF2E7D32);
   static const Color primaryLight = Color(0xFFE8F5E9);
-  
+
   static const Color accentOrange = Color(0xFFFF9800);
   static const Color accentPurple = Color(0xFF9C27B0);
   static const Color accentBlue = Color(0xFF2196F3);
 
   // Neutral Colors
-  static const Color background = Color(0xFFF8F9FA); // Slightly off-white for better eye comfort
+  static const Color background = Color(
+    0xFFF8F9FA,
+  ); // Slightly off-white for better eye comfort
   static const Color surface = Colors.white;
   static const Color textPrimary = Color(0xFF1A1C1E);
   static const Color textSecondary = Color(0xFF757575);
@@ -30,14 +32,29 @@ class AppTheme {
         onSurface: textPrimary,
       ),
       scaffoldBackgroundColor: background,
-      
+
       // Typography
       textTheme: GoogleFonts.interTextTheme().copyWith(
-        displayLarge: const TextStyle(fontWeight: FontWeight.bold, color: textPrimary),
-        displayMedium: const TextStyle(fontWeight: FontWeight.bold, color: textPrimary),
-        headlineLarge: const TextStyle(fontWeight: FontWeight.bold, color: textPrimary),
-        headlineMedium: const TextStyle(fontWeight: FontWeight.bold, color: textPrimary),
-        titleLarge: const TextStyle(fontWeight: FontWeight.w600, color: textPrimary),
+        displayLarge: const TextStyle(
+          fontWeight: FontWeight.bold,
+          color: textPrimary,
+        ),
+        displayMedium: const TextStyle(
+          fontWeight: FontWeight.bold,
+          color: textPrimary,
+        ),
+        headlineLarge: const TextStyle(
+          fontWeight: FontWeight.bold,
+          color: textPrimary,
+        ),
+        headlineMedium: const TextStyle(
+          fontWeight: FontWeight.bold,
+          color: textPrimary,
+        ),
+        titleLarge: const TextStyle(
+          fontWeight: FontWeight.w600,
+          color: textPrimary,
+        ),
         bodyLarge: const TextStyle(color: textPrimary),
         bodyMedium: const TextStyle(color: textSecondary),
       ),
@@ -64,13 +81,10 @@ class AppTheme {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
           ),
-          textStyle: const TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-          ),
+          textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
         ),
       ),
-      
+
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           foregroundColor: primaryGreen,
@@ -106,7 +120,7 @@ class AppTheme {
         hintStyle: TextStyle(color: textSecondary.withOpacity(0.5)),
       ),
 
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         color: surface,
         elevation: 0,
         shape: RoundedRectangleBorder(

@@ -11,7 +11,7 @@ class DatabaseService {
   String? get currentUserId => _auth.currentUser?.uid;
 
   // ==================== USER PROFILE ====================
-  
+
   /// Create or update user profile
   Future<void> saveUserProfile({
     required String userId,
@@ -37,7 +37,7 @@ class DatabaseService {
   }
 
   // ==================== POSTS (Items) ====================
-  
+
   /// Create a new post (giveaway/available item)
   Future<String> createPost({
     required String title,
@@ -47,9 +47,14 @@ class DatabaseService {
     required String type, // 'giveaway' or 'available'
     List<String>? imageUrls,
   }) async {
-    if (currentUserId == null) throw Exception('User not logged in');
+    if (currentUserId == null) {
+      print('ERROR: User not logged in!');
+      throw Exception('User not logged in');
+    }
 
-    final docRef = await _db.collection('posts').add({
+    print('Creating post for user: $currentUserId');
+
+    final postData = {
       'userId': currentUserId,
       'title': title,
       'description': description,
@@ -63,7 +68,13 @@ class DatabaseService {
       'status': 'active', // active, reserved, completed
       'createdAt': FieldValue.serverTimestamp(),
       'updatedAt': FieldValue.serverTimestamp(),
-    });
+    };
+
+    print('Post data: $postData');
+
+    final docRef = await _db.collection('posts').add(postData);
+
+    print('Post added with ID: ${docRef.id}');
 
     return docRef.id;
   }
@@ -86,7 +97,13 @@ class DatabaseService {
       query = query.where('status', isEqualTo: status);
     }
 
-    return query.orderBy('createdAt', descending: true).snapshots();
+    // Only order by createdAt if no filters are applied
+    // (to avoid requiring Firestore index)
+    if (type == null && category == null && status == null) {
+      query = query.orderBy('createdAt', descending: true);
+    }
+
+    return query.snapshots();
   }
 
   /// Get user's posts
@@ -94,7 +111,6 @@ class DatabaseService {
     return _db
         .collection('posts')
         .where('userId', isEqualTo: userId)
-        .orderBy('createdAt', descending: true)
         .snapshots();
   }
 
@@ -110,7 +126,7 @@ class DatabaseService {
   }
 
   // ==================== FAVORITES ====================
-  
+
   /// Toggle favorite status
   Future<void> toggleFavorite(String postId) async {
     if (currentUserId == null) throw Exception('User not logged in');
@@ -122,7 +138,7 @@ class DatabaseService {
         .doc(postId);
 
     final doc = await favRef.get();
-    
+
     if (doc.exists) {
       // Remove from favorites
       await favRef.delete();
@@ -139,7 +155,8 @@ class DatabaseService {
   Stream<QuerySnapshot> getFavoritePosts() {
     if (currentUserId == null) {
       return Stream.value(
-        FirebaseFirestore.instance.collection('posts').limit(0).get() as QuerySnapshot,
+        FirebaseFirestore.instance.collection('posts').limit(0).get()
+            as QuerySnapshot,
       );
     }
 
@@ -165,7 +182,7 @@ class DatabaseService {
   }
 
   // ==================== MESSAGES / CHATS ====================
-  
+
   /// Create or get existing chat between two users
   Future<String> getOrCreateChat(String otherUserId) async {
     if (currentUserId == null) throw Exception('User not logged in');
@@ -227,7 +244,8 @@ class DatabaseService {
   Stream<QuerySnapshot> getConversations() {
     if (currentUserId == null) {
       return Stream.value(
-        FirebaseFirestore.instance.collection('chats').limit(0).get() as QuerySnapshot,
+        FirebaseFirestore.instance.collection('chats').limit(0).get()
+            as QuerySnapshot,
       );
     }
 
@@ -239,7 +257,7 @@ class DatabaseService {
   }
 
   // ==================== NOTIFICATIONS ====================
-  
+
   /// Create a notification
   Future<void> createNotification({
     required String recipientId,
@@ -265,7 +283,8 @@ class DatabaseService {
   Stream<QuerySnapshot> getNotifications() {
     if (currentUserId == null) {
       return Stream.value(
-        FirebaseFirestore.instance.collection('notifications').limit(0).get() as QuerySnapshot,
+        FirebaseFirestore.instance.collection('notifications').limit(0).get()
+            as QuerySnapshot,
       );
     }
 
