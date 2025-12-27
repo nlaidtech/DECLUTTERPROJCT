@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../widgets/giveaway_card.dart';
 import '../widgets/available_item_tile.dart';
 import '../services/favorites_service.dart';
+import '../services/database_service.dart';
+import 'item_detail_screen.dart';
 
 /// View All Screen
 ///
@@ -23,36 +25,11 @@ class ViewAllScreen extends StatefulWidget {
 
 class _ViewAllScreenState extends State<ViewAllScreen> {
   final FavoritesService _favoritesService = FavoritesService();
+  final DatabaseService _databaseService = DatabaseService();
   String _sortBy = 'Recent';
   bool _isGridView = false;
 
   final List<String> _sortOptions = ['Recent', 'Distance', 'Rating'];
-
-  // Sample items for demonstration
-  final List<Map<String, dynamic>> _giveawayItems = [
-    {'name': 'Base Camp Tent', 'rating': 4.9, 'distance': '2.3 km'},
-    {'name': 'Google Pixel Tablet', 'rating': 4.1, 'distance': '3.5 km'},
-    {'name': 'Stainless Pot', 'rating': 4.0, 'distance': '1.8 km'},
-    {'name': 'Mountain Bike', 'rating': 4.7, 'distance': '4.2 km'},
-    {'name': 'Desk Lamp', 'rating': 4.5, 'distance': '2.9 km'},
-    {'name': 'Bookshelf', 'rating': 4.3, 'distance': '3.1 km'},
-    {'name': 'Running Shoes', 'rating': 4.6, 'distance': '1.5 km'},
-    {'name': 'Coffee Maker', 'rating': 4.4, 'distance': '2.7 km'},
-  ];
-
-  final List<Map<String, dynamic>> _availableItems = [
-    {'name': 'Craftsman Cordless Drill', 'rating': 4.9, 'distance': '4.0 km'},
-    {'name': 'Office Chair', 'rating': 4.3, 'distance': '2.5 km'},
-    {'name': 'Portable Speaker', 'rating': 4.5, 'distance': '3.2 km'},
-    {'name': 'Gaming Console', 'rating': 4.8, 'distance': '5.1 km'},
-    {'name': 'Electric Kettle', 'rating': 4.2, 'distance': '1.9 km'},
-    {'name': 'Table Lamp', 'rating': 4.6, 'distance': '3.7 km'},
-    {'name': 'Yoga Mat', 'rating': 4.4, 'distance': '2.2 km'},
-    {'name': 'Bluetooth Headphones', 'rating': 4.7, 'distance': '4.5 km'},
-  ];
-
-  List<Map<String, dynamic>> get _items =>
-      widget.categoryType == 'giveaway' ? _giveawayItems : _availableItems;
 
   @override
   Widget build(BuildContext context) {
@@ -146,33 +123,65 @@ class _ViewAllScreenState extends State<ViewAllScreen> {
             ),
           ),
 
-          // Items count
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                Text(
-                  '${_items.length} items found',
-                  style: TextStyle(
-                    color: Colors.grey[600],
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          // Items List/Grid
+          // Items List/Grid with StreamBuilder
           Expanded(
-            child: _isGridView ? _buildGridView() : _buildListView(),
+            child: StreamBuilder<List<Map<String, dynamic>>>(
+              stream: _databaseService.getPosts(
+                type: widget.categoryType,
+                status: 'active',
+              ),
+              builder: (context, snapshot) {
+                if (snapshot.hasError) {
+                  return Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(20.0),
+                      child: Text(
+                        'Error loading items: ${snapshot.error}',
+                        style: const TextStyle(color: Colors.red),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  );
+                }
+
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+
+                final posts = snapshot.data ?? [];
+
+                if (posts.isEmpty) {
+                  return Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(20.0),
+                      child: Text(
+                        'No ${widget.categoryType} items yet.\nBe the first to post!',
+                        style: TextStyle(color: Colors.grey[600]),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  );
+                }
+
+                // Update item count
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (mounted) {
+                    setState(() {});
+                  }
+                });
+
+                return _isGridView 
+                  ? _buildGridView(posts) 
+                  : _buildListView(posts);
+              },
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildGridView() {
+  Widget _buildGridView(List<Map<String, dynamic>> posts) {
     return GridView.builder(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
@@ -181,30 +190,69 @@ class _ViewAllScreenState extends State<ViewAllScreen> {
         crossAxisSpacing: 12,
         mainAxisSpacing: 12,
       ),
-      itemCount: _items.length,
+      itemCount: posts.length,
       itemBuilder: (context, index) {
-        final item = _items[index];
+        final post = posts[index];
+        final title = post['title'] ?? 'Untitled';
+        final rating = (post['rating'] ?? 0.0).toDouble();
+        final location = post['location'] ?? 'Unknown';
+        final imageUrls = List<String>.from(post['image_urls'] ?? []);
+        final imageUrl = imageUrls.isNotEmpty ? imageUrls.first : null;
+
         return GiveAwayCard(
-          item['name'],
-          item['rating'].toDouble(),
+          title,
+          rating,
           _favoritesService,
+          imageUrl: imageUrl,
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => ItemDetailScreen(
+                  itemTitle: title,
+                  rating: rating,
+                  location: location,
+                ),
+              ),
+            );
+          },
         );
       },
     );
   }
 
-  Widget _buildListView() {
+  Widget _buildListView(List<Map<String, dynamic>> posts) {
     return ListView.builder(
       padding: const EdgeInsets.symmetric(horizontal: 16),
-      itemCount: _items.length,
+      itemCount: posts.length,
       itemBuilder: (context, index) {
-        final item = _items[index];
+        final post = posts[index];
+        final title = post['title'] ?? 'Untitled';
+        final rating = (post['rating'] ?? 0.0).toDouble();
+        final location = post['location'] ?? 'Unknown';
+        final subtitle = '$location • ${rating.toStringAsFixed(1)} ★';
+        final imageUrls = List<String>.from(post['image_urls'] ?? []);
+        final imageUrl = imageUrls.isNotEmpty ? imageUrls.first : null;
+
         return Padding(
           padding: const EdgeInsets.only(bottom: 12),
           child: AvailableItemTile(
-            item['name'],
-            '${item['distance']} away • ${item['rating']} ★',
+            title,
+            subtitle,
             _favoritesService,
+            imageUrl: imageUrl,
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => ItemDetailScreen(
+                    itemTitle: title,
+                    rating: rating,
+                    location: location,
+                  ),
+                ),
+              );
+            },
           ),
         );
       },

@@ -1,14 +1,11 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import '../main.dart';
 
-/// Firestore Database Service
+/// Supabase Database Service
 /// Handles all database operations for posts, messages, and user data
 class DatabaseService {
-  final FirebaseFirestore _db = FirebaseFirestore.instance;
-  final FirebaseAuth _auth = FirebaseAuth.instance;
-
   // Get current user ID
-  String? get currentUserId => _auth.currentUser?.uid;
+  String? get currentUserId => supabase.auth.currentUser?.id;
 
   // ==================== USER PROFILE ====================
 
@@ -20,20 +17,22 @@ class DatabaseService {
     String? photoUrl,
     String? location,
   }) async {
-    await _db.collection('users').doc(userId).set({
+    await supabase.from('users').upsert({
+      'id': userId,
       'email': email,
-      'displayName': displayName ?? email.split('@')[0],
-      'photoUrl': photoUrl,
-      'location': location ?? 'PANABO',
-      'createdAt': FieldValue.serverTimestamp(),
-      'updatedAt': FieldValue.serverTimestamp(),
-    }, SetOptions(merge: true));
+      'name': displayName ?? email.split('@')[0],
+      // Add location field if needed in your users table
+    });
   }
 
   /// Get user profile
   Future<Map<String, dynamic>?> getUserProfile(String userId) async {
-    final doc = await _db.collection('users').doc(userId).get();
-    return doc.data();
+    final response = await supabase
+        .from('users')
+        .select()
+        .eq('id', userId)
+        .maybeSingle();
+    return response;
   }
 
   // ==================== POSTS (Items) ====================
@@ -48,81 +47,80 @@ class DatabaseService {
     List<String>? imageUrls,
   }) async {
     if (currentUserId == null) {
-      print('ERROR: User not logged in!');
       throw Exception('User not logged in');
     }
 
-    print('Creating post for user: $currentUserId');
-
-    final postData = {
-      'userId': currentUserId,
+    final response = await supabase.from('posts').insert({
+      'user_id': currentUserId,
       'title': title,
       'description': description,
       'category': category,
       'location': location,
       'type': type,
-      'imageUrls': imageUrls ?? [],
-      'rating': 0.0,
-      'viewCount': 0,
-      'isFavorite': false,
-      'status': 'active', // active, reserved, completed
-      'createdAt': FieldValue.serverTimestamp(),
-      'updatedAt': FieldValue.serverTimestamp(),
-    };
+      'image_urls': imageUrls ?? [],
+      'status': 'active',
+    }).select('id').single();
 
-    print('Post data: $postData');
-
-    final docRef = await _db.collection('posts').add(postData);
-
-    print('Post added with ID: ${docRef.id}');
-
-    return docRef.id;
+    return response['id'] as String;
   }
 
   /// Get all posts (with optional filters)
-  Stream<QuerySnapshot> getPosts({
-    String? type, // 'giveaway' or 'available'
+  Stream<List<Map<String, dynamic>>> getPosts({
+    String? type,
     String? category,
     String? status,
   }) {
-    Query query = _db.collection('posts');
+    var query = supabase.from('posts').stream(primaryKey: ['id']);
+
+    // Note: Supabase Realtime doesn't support .eq() chaining on streams
+    // For filtered data, use regular queries instead
+    return query;
+  }
+
+  /// Get all posts as a one-time query (with filters)
+  Future<List<Map<String, dynamic>>> getPostsOnce({
+    String? type,
+    String? category,
+    String? status,
+  }) async {
+    var query = supabase.from('posts').select();
 
     if (type != null) {
-      query = query.where('type', isEqualTo: type);
+      query = query.eq('type', type);
     }
     if (category != null) {
-      query = query.where('category', isEqualTo: category);
+      query = query.eq('category', category);
     }
     if (status != null) {
-      query = query.where('status', isEqualTo: status);
+      query = query.eq('status', status);
     }
 
-    // Only order by createdAt if no filters are applied
-    // (to avoid requiring Firestore index)
-    if (type == null && category == null && status == null) {
-      query = query.orderBy('createdAt', descending: true);
-    }
+    final result = await query.order('created_at', ascending: false);
 
-    return query.snapshots();
+    return result as List<Map<String, dynamic>>;
   }
 
   /// Get user's posts
-  Stream<QuerySnapshot> getUserPosts(String userId) {
-    return _db
-        .collection('posts')
-        .where('userId', isEqualTo: userId)
-        .snapshots();
+  Stream<List<Map<String, dynamic>>> getUserPosts(String userId) {
+    return supabase
+        .from('posts')
+        .stream(primaryKey: ['id'])
+        .eq('user_id', userId);
   }
 
   /// Update post
   Future<void> updatePost(String postId, Map<String, dynamic> data) async {
-    data['updatedAt'] = FieldValue.serverTimestamp();
-    await _db.collection('posts').doc(postId).update(data);
+    await supabase.from('posts').update(data).eq('id', postId);
   }
 
   /// Delete post
   Future<void> deletePost(String postId) async {
-    await _db.collection('posts').doc(postId).delete();
+    await supabase.from('posts').delete().eq('id', postId);
+  }
+
+  /// Increment view count
+  Future<void> incrementViewCount(String postId) async {
+    await supabase.rpc('increment_view_count', params: {'post_id': postId});
   }
 
   // ==================== FAVORITES ====================
@@ -131,175 +129,152 @@ class DatabaseService {
   Future<void> toggleFavorite(String postId) async {
     if (currentUserId == null) throw Exception('User not logged in');
 
-    final favRef = _db
-        .collection('users')
-        .doc(currentUserId)
-        .collection('favorites')
-        .doc(postId);
+    final existing = await supabase
+        .from('favorites')
+        .select()
+        .eq('user_id', currentUserId!)
+        .eq('post_id', postId)
+        .maybeSingle();
 
-    final doc = await favRef.get();
-
-    if (doc.exists) {
+    if (existing != null) {
       // Remove from favorites
-      await favRef.delete();
+      await supabase
+          .from('favorites')
+          .delete()
+          .eq('user_id', currentUserId!)
+          .eq('post_id', postId);
     } else {
       // Add to favorites
-      await favRef.set({
-        'postId': postId,
-        'createdAt': FieldValue.serverTimestamp(),
+      await supabase.from('favorites').insert({
+        'user_id': currentUserId,
+        'post_id': postId,
       });
     }
   }
 
   /// Get user's favorite posts
-  Stream<QuerySnapshot> getFavoritePosts() {
+  Stream<List<Map<String, dynamic>>> getFavoritePosts() {
     if (currentUserId == null) {
-      return Stream.value(
-        FirebaseFirestore.instance.collection('posts').limit(0).get()
-            as QuerySnapshot,
-      );
+      return Stream.value([]);
     }
 
-    return _db
-        .collection('users')
-        .doc(currentUserId)
-        .collection('favorites')
-        .snapshots();
+    return supabase
+        .from('favorites')
+        .stream(primaryKey: ['user_id', 'post_id'])
+        .eq('user_id', currentUserId!);
+  }
+
+  /// Get favorite posts with post details
+  Future<List<Map<String, dynamic>>> getFavoritePostsWithDetails() async {
+    if (currentUserId == null) return [];
+
+    final response = await supabase
+        .from('favorites')
+        .select('*, posts(*)')
+        .eq('user_id', currentUserId!);
+
+    return response as List<Map<String, dynamic>>;
   }
 
   /// Check if post is favorited
   Future<bool> isFavorite(String postId) async {
     if (currentUserId == null) return false;
 
-    final doc = await _db
-        .collection('users')
-        .doc(currentUserId)
-        .collection('favorites')
-        .doc(postId)
-        .get();
+    final response = await supabase
+        .from('favorites')
+        .select()
+        .eq('user_id', currentUserId!)
+        .eq('post_id', postId)
+        .maybeSingle();
 
-    return doc.exists;
+    return response != null;
   }
 
   // ==================== MESSAGES / CHATS ====================
 
-  /// Create or get existing chat between two users
-  Future<String> getOrCreateChat(String otherUserId) async {
+  /// Create or get existing conversation
+  Future<String> getOrCreateChat(String otherUserId, {String? postId}) async {
     if (currentUserId == null) throw Exception('User not logged in');
 
-    // Create a consistent chat ID (sorted user IDs)
-    final users = [currentUserId!, otherUserId]..sort();
-    final chatId = '${users[0]}_${users[1]}';
+    // Check if conversation already exists between these users
+    final existing = await supabase
+        .from('conversation_participants')
+        .select('conversation_id')
+        .eq('user_id', currentUserId!)
+        .select();
 
-    final chatRef = _db.collection('chats').doc(chatId);
-    final chatDoc = await chatRef.get();
+    // For now, create a new conversation
+    final convResponse = await supabase.from('conversations').insert({
+      'post_id': postId,
+    }).select('id').single();
 
-    if (!chatDoc.exists) {
-      await chatRef.set({
-        'users': users,
-        'createdAt': FieldValue.serverTimestamp(),
-        'lastMessage': '',
-        'lastMessageTime': FieldValue.serverTimestamp(),
-      });
-    }
+    final conversationId = convResponse['id'] as String;
 
-    return chatId;
+    // Add participants
+    await supabase.from('conversation_participants').insert([
+      {'conversation_id': conversationId, 'user_id': currentUserId},
+      {'conversation_id': conversationId, 'user_id': otherUserId},
+    ]);
+
+    return conversationId;
   }
 
   /// Send a message
   Future<void> sendMessage({
-    required String chatId,
+    required String conversationId,
     required String text,
     String? imageUrl,
+    String? replyToId,
   }) async {
     if (currentUserId == null) throw Exception('User not logged in');
 
-    // Add message to messages subcollection
-    await _db.collection('chats').doc(chatId).collection('messages').add({
-      'senderId': currentUserId,
+    await supabase.from('messages').insert({
+      'conversation_id': conversationId,
+      'sender_id': currentUserId,
       'text': text,
-      'imageUrl': imageUrl,
-      'timestamp': FieldValue.serverTimestamp(),
-      'status': 'sent',
+      'image_url': imageUrl,
+      'reply_to_id': replyToId,
+      'message_type': imageUrl != null ? 'image' : 'text',
     });
 
-    // Update last message in chat document
-    await _db.collection('chats').doc(chatId).update({
-      'lastMessage': text,
-      'lastMessageTime': FieldValue.serverTimestamp(),
-    });
+    // Update conversation's updated_at
+    await supabase
+        .from('conversations')
+        .update({'updated_at': DateTime.now().toIso8601String()})
+        .eq('id', conversationId);
   }
 
-  /// Get messages in a chat
-  Stream<QuerySnapshot> getMessages(String chatId) {
-    return _db
-        .collection('chats')
-        .doc(chatId)
-        .collection('messages')
-        .orderBy('timestamp', descending: false)
-        .snapshots();
+  /// Get messages in a conversation
+  Stream<List<Map<String, dynamic>>> getMessages(String conversationId) {
+    return supabase
+        .from('messages')
+        .stream(primaryKey: ['id'])
+        .eq('conversation_id', conversationId)
+        .order('created_at', ascending: true);
   }
 
-  /// Get user's conversations
-  Stream<QuerySnapshot> getConversations() {
-    if (currentUserId == null) {
-      return Stream.value(
-        FirebaseFirestore.instance.collection('chats').limit(0).get()
-            as QuerySnapshot,
-      );
-    }
+  /// Get user's conversations with latest message
+  Future<List<Map<String, dynamic>>> getConversations() async {
+    if (currentUserId == null) return [];
 
-    return _db
-        .collection('chats')
-        .where('users', arrayContains: currentUserId)
-        .orderBy('lastMessageTime', descending: true)
-        .snapshots();
+    // Get conversations where user is a participant
+    final response = await supabase
+        .from('conversation_participants')
+        .select('conversation_id, conversations(*)')
+        .eq('user_id', currentUserId!)
+        .order('conversations.updated_at', ascending: false);
+
+    return response as List<Map<String, dynamic>>;
   }
 
-  // ==================== NOTIFICATIONS ====================
+  /// Mark messages as read
+  Future<void> markMessagesAsRead(String conversationId) async {
+    if (currentUserId == null) return;
 
-  /// Create a notification
-  Future<void> createNotification({
-    required String recipientId,
-    required String type, // 'message', 'interest', 'review'
-    required String title,
-    required String body,
-    String? postId,
-    String? chatId,
-  }) async {
-    await _db.collection('notifications').add({
-      'recipientId': recipientId,
-      'type': type,
-      'title': title,
-      'body': body,
-      'postId': postId,
-      'chatId': chatId,
-      'read': false,
-      'createdAt': FieldValue.serverTimestamp(),
-    });
-  }
-
-  /// Get user's notifications
-  Stream<QuerySnapshot> getNotifications() {
-    if (currentUserId == null) {
-      return Stream.value(
-        FirebaseFirestore.instance.collection('notifications').limit(0).get()
-            as QuerySnapshot,
-      );
-    }
-
-    return _db
-        .collection('notifications')
-        .where('recipientId', isEqualTo: currentUserId)
-        .orderBy('createdAt', descending: true)
-        .limit(50)
-        .snapshots();
-  }
-
-  /// Mark notification as read
-  Future<void> markNotificationAsRead(String notificationId) async {
-    await _db.collection('notifications').doc(notificationId).update({
-      'read': true,
-    });
+    await supabase
+        .from('messages')
+        .update({'status': 'read'})
+        .eq('conversation_id', conversationId)
+        .neq('sender_id', currentUserId!);
   }
 }

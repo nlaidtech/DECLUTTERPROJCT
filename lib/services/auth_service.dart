@@ -1,110 +1,115 @@
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import '../main.dart';
 
-/// Firebase Authentication Service
+/// Supabase Authentication Service
 /// Handles user sign up, login, logout, and password reset
 class AuthService {
-  final FirebaseAuth _auth = FirebaseAuth.instance;
-  final FirebaseFirestore _db = FirebaseFirestore.instance;
-
   // Get current user
-  User? get currentUser => _auth.currentUser;
+  User? get currentUser => supabase.auth.currentUser;
 
   // Stream of auth state changes
-  Stream<User?> get authStateChanges => _auth.authStateChanges();
+  Stream<AuthState> get authStateChanges => supabase.auth.onAuthStateChange;
 
   /// Sign up with email and password
-  Future<UserCredential?> signUpWithEmail({
+  Future<AuthResponse> signUpWithEmail({
     required String email,
     required String password,
     required String name,
   }) async {
     try {
-      // Create user account in Firebase Auth
-      final credential = await _auth.createUserWithEmailAndPassword(
+      // Create user account with Supabase Auth
+      // The trigger will automatically create the user profile
+      final response = await supabase.auth.signUp(
         email: email,
         password: password,
+        data: {'name': name}, // Store name in user metadata
       );
 
-      // Save user data to Firestore database
-      if (credential.user != null) {
-        await _db.collection('users').doc(credential.user!.uid).set({
-          'email': email,
-          'name': name,
-          'createdAt': FieldValue.serverTimestamp(),
-          'location': 'Panabo',
-        });
-      }
+      // Log response for debugging
+      print('Signup response: ${response.user?.id}, session: ${response.session != null}');
 
-      return credential;
-    } on FirebaseAuthException catch (e) {
+      return response;
+    } on AuthException catch (e) {
+      print('AuthException: ${e.message}, code: ${e.statusCode}');
       throw _handleAuthException(e);
+    } catch (e) {
+      print('Unexpected error: $e');
+      rethrow;
     }
   }
 
   /// Sign in with email and password
-  Future<UserCredential?> signInWithEmail({
+  Future<AuthResponse> signInWithEmail({
     required String email,
     required String password,
   }) async {
     try {
-      // First verify user exists in Firestore database
-      final querySnapshot = await _db
-          .collection('users')
-          .where('email', isEqualTo: email)
-          .limit(1)
-          .get();
-
-      if (querySnapshot.docs.isEmpty) {
-        throw 'No account found. Please sign up first.';
-      }
-
-      // If user exists in database, proceed with authentication
-      final credential = await _auth.signInWithEmailAndPassword(
+      // Authenticate with Supabase
+      final response = await supabase.auth.signInWithPassword(
         email: email,
         password: password,
       );
-      return credential;
-    } on FirebaseAuthException catch (e) {
+      return response;
+    } on AuthException catch (e) {
       throw _handleAuthException(e);
-    } catch (e) {
-      throw e.toString();
     }
   }
 
   /// Sign out
   Future<void> signOut() async {
-    await _auth.signOut();
+    await supabase.auth.signOut();
   }
 
   /// Send password reset email
   Future<void> resetPassword(String email) async {
     try {
-      await _auth.sendPasswordResetEmail(email: email);
-    } on FirebaseAuthException catch (e) {
+      await supabase.auth.resetPasswordForEmail(email);
+    } on AuthException catch (e) {
       throw _handleAuthException(e);
     }
   }
 
-  /// Handle Firebase Auth exceptions
-  String _handleAuthException(FirebaseAuthException e) {
-    switch (e.code) {
-      case 'weak-password':
-        return 'The password is too weak';
-      case 'email-already-in-use':
-        return 'An account already exists with this email';
-      case 'user-not-found':
-        return 'No user found with this email';
-      case 'wrong-password':
-        return 'Wrong password provided';
-      case 'invalid-email':
-        return 'Invalid email address';
-      case 'user-disabled':
-        return 'This account has been disabled';
-      case 'too-many-requests':
-        return 'Too many attempts. Please try again later';
-      default:
-        return 'An error occurred: ${e.message}';
+  /// Get user profile from database
+  Future<Map<String, dynamic>?> getUserProfile(String userId) async {
+    try {
+      final response = await supabase
+          .from('users')
+          .select()
+          .eq('id', userId)
+          .single();
+      return response;
+    } on PostgrestException catch (e) {
+      throw 'Error fetching profile: ${e.message}';
+    }
+  }
+
+  /// Update user profile
+  Future<void> updateUserProfile(String userId, Map<String, dynamic> updates) async {
+    try {
+      await supabase.from('users').update(updates).eq('id', userId);
+    } on PostgrestException catch (e) {
+      throw 'Error updating profile: ${e.message}';
+    }
+  }
+
+  /// Handle Supabase Auth exceptions
+  String _handleAuthException(AuthException e) {
+    final message = e.message.toLowerCase();
+    
+    if (message.contains('user already registered')) {
+      return 'This email is already registered. Please login instead.';
+    } else if (message.contains('invalid login credentials')) {
+      return 'Invalid email or password';
+    } else if (message.contains('email not confirmed')) {
+      return 'Please verify your email address';
+    } else if (message.contains('password')) {
+      return 'Password must be at least 6 characters';
+    } else if (message.contains('invalid email')) {
+      return 'Invalid email address';
+    } else if (message.contains('too many requests')) {
+      return 'Too many attempts. Please try again later';
+    } else {
+      return 'Authentication error: ${e.message}';
     }
   }
 }

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_core/firebase_core.dart';
-import 'firebase_options.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'theme.dart';
 import 'screens/login_screen.dart';
 import 'screens/signup_screen.dart';
@@ -14,11 +14,21 @@ import 'services/favorites_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
+  
+  // Load environment variables
+  await dotenv.load(fileName: ".env");
+  
+  // Initialize Supabase
+  await Supabase.initialize(
+    url: dotenv.env['SUPABASE_URL']!,
+    anonKey: dotenv.env['SUPABASE_ANON_KEY']!,
   );
+  
   runApp(const MyApp());
 }
+
+// Global Supabase client instance - access anywhere with: supabase.auth, supabase.from(), etc.
+final supabase = Supabase.instance.client;
 
 // Root widget of the application - now Stateful to show welcome dialog on first run
 class MyApp extends StatefulWidget {

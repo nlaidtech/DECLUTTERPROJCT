@@ -1,10 +1,10 @@
 import 'dart:io';
 import 'dart:typed_data';
-import 'package:firebase_storage/firebase_storage.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter/foundation.dart' show kIsWeb, compute;
 import 'package:file_picker/file_picker.dart';
 import 'package:image/image.dart' as img;
+import '../main.dart';
 
 /// Compress image in separate isolate (doesn't block UI)
 Uint8List _compressImageIsolate(Uint8List imageBytes) {
@@ -30,17 +30,14 @@ Uint8List _compressImageIsolate(Uint8List imageBytes) {
   }
 }
 
-/// Firebase Storage Service
-/// Handles all file uploads to Firebase Storage
+/// Supabase Storage Service
+/// Handles all file uploads to Supabase Storage
 class StorageService {
-  final FirebaseStorage _storage = FirebaseStorage.instance;
-  final FirebaseAuth _auth = FirebaseAuth.instance;
-
   // Get current user ID
-  String? get currentUserId => _auth.currentUser?.uid;
+  String? get currentUserId => supabase.auth.currentUser?.id;
 
-  /// Upload a post image to Firebase Storage
-  /// Returns the download URL of the uploaded image
+  /// Upload a post image to Supabase Storage
+  /// Returns the public URL of the uploaded image
   Future<String> uploadPostImage(
     PlatformFile imageFile,
     String fileName,
@@ -50,8 +47,8 @@ class StorageService {
     }
 
     try {
-      // Create a reference to the file location
-      final ref = _storage.ref().child('posts/$currentUserId/$fileName.jpg');
+      // Create a path for the file
+      final path = 'posts/$currentUserId/$fileName.jpg';
 
       Uint8List imageBytes;
 
@@ -73,34 +70,35 @@ class StorageService {
           ? _compressImageIsolate(imageBytes) // Web doesn't support isolates
           : await compute(_compressImageIsolate, imageBytes);
 
-      // Upload compressed image
-      final uploadTask = ref.putData(
-        compressedBytes,
-        SettableMetadata(contentType: 'image/jpeg'),
-      );
+      // Upload to Supabase Storage
+      await supabase.storage.from('post-images').uploadBinary(
+            path,
+            compressedBytes,
+            fileOptions: const FileOptions(
+              contentType: 'image/jpeg',
+              upsert: true,
+            ),
+          );
 
-      // Wait for upload to complete
-      final snapshot = await uploadTask;
+      // Get the public URL
+      final publicUrl = supabase.storage.from('post-images').getPublicUrl(path);
 
-      // Get the download URL
-      final downloadUrl = await snapshot.ref.getDownloadURL();
-
-      print('Image uploaded successfully: $downloadUrl');
-      return downloadUrl;
+      print('Image uploaded successfully: $publicUrl');
+      return publicUrl;
     } catch (e) {
       print('Error uploading image: $e');
       throw Exception('Failed to upload image: $e');
     }
   }
 
-  /// Upload a profile picture to Firebase Storage
+  /// Upload a profile picture to Supabase Storage
   Future<String> uploadProfilePicture(PlatformFile imageFile) async {
     if (currentUserId == null) {
       throw Exception('User not logged in');
     }
 
     try {
-      final ref = _storage.ref().child('profiles/$currentUserId/profile.jpg');
+      final path = 'profiles/$currentUserId/profile.jpg';
 
       Uint8List imageBytes;
 
@@ -121,27 +119,33 @@ class StorageService {
           ? _compressImageIsolate(imageBytes)
           : await compute(_compressImageIsolate, imageBytes);
 
-      final uploadTask = ref.putData(
-        compressedBytes,
-        SettableMetadata(contentType: 'image/jpeg'),
-      );
+      await supabase.storage.from('avatars').uploadBinary(
+            path,
+            compressedBytes,
+            fileOptions: const FileOptions(
+              contentType: 'image/jpeg',
+              upsert: true,
+            ),
+          );
 
-      final snapshot = await uploadTask;
-      final downloadUrl = await snapshot.ref.getDownloadURL();
+      final publicUrl = supabase.storage.from('avatars').getPublicUrl(path);
 
-      print('Profile picture uploaded successfully: $downloadUrl');
-      return downloadUrl;
+      print('Profile picture uploaded successfully: $publicUrl');
+      return publicUrl;
     } catch (e) {
       print('Error uploading profile picture: $e');
       throw Exception('Failed to upload profile picture: $e');
     }
   }
 
-  /// Delete an image from Firebase Storage
-  Future<void> deleteImage(String imageUrl) async {
+  /// Delete an image from Supabase Storage
+  Future<void> deleteImage(String imageUrl, String bucket) async {
     try {
-      final ref = _storage.refFromURL(imageUrl);
-      await ref.delete();
+      // Extract path from public URL
+      final uri = Uri.parse(imageUrl);
+      final path = uri.pathSegments.last;
+      
+      await supabase.storage.from(bucket).remove([path]);
       print('Image deleted successfully: $imageUrl');
     } catch (e) {
       print('Error deleting image: $e');
@@ -153,7 +157,7 @@ class StorageService {
   Future<void> deletePostImages(List<String> imageUrls) async {
     for (final url in imageUrls) {
       try {
-        await deleteImage(url);
+        await deleteImage(url, 'post-images');
       } catch (e) {
         print('Error deleting image $url: $e');
         // Continue deleting other images even if one fails

@@ -1,5 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-
 /// Post Model
 /// Represents a post (item) that users create to give away or make available
 class PostModel {
@@ -35,47 +33,45 @@ class PostModel {
     this.updatedAt,
   });
 
-  /// Create PostModel from Firestore document
-  factory PostModel.fromFirestore(DocumentSnapshot doc) {
-    final data = doc.data() as Map<String, dynamic>;
+  /// Create PostModel from Supabase JSON
+  factory PostModel.fromJson(Map<String, dynamic> json) {
     return PostModel(
-      id: doc.id,
-      userId: data['userId'] ?? '',
-      title: data['title'] ?? '',
-      description: data['description'] ?? '',
-      category: data['category'] ?? '',
-      location: data['location'] ?? '',
-      type: data['type'] ?? 'available',
-      imageUrls: List<String>.from(data['imageUrls'] ?? []),
-      rating: (data['rating'] ?? 0.0).toDouble(),
-      viewCount: data['viewCount'] ?? 0,
-      isFavorite: data['isFavorite'] ?? false,
-      status: data['status'] ?? 'active',
-      createdAt: (data['createdAt'] as Timestamp?)?.toDate(),
-      updatedAt: (data['updatedAt'] as Timestamp?)?.toDate(),
+      id: json['id'] ?? '',
+      userId: json['user_id'] ?? '',
+      title: json['title'] ?? '',
+      description: json['description'] ?? '',
+      category: json['category'] ?? '',
+      location: json['location'] ?? '',
+      type: json['type'] ?? 'available',
+      imageUrls: json['image_urls'] != null 
+          ? List<String>.from(json['image_urls'])
+          : [],
+      rating: (json['rating'] ?? 0.0).toDouble(),
+      viewCount: json['view_count'] ?? 0,
+      isFavorite: json['is_favorite'] ?? false,
+      status: json['status'] ?? 'active',
+      createdAt: json['created_at'] != null 
+          ? DateTime.parse(json['created_at'])
+          : null,
+      updatedAt: json['updated_at'] != null 
+          ? DateTime.parse(json['updated_at'])
+          : null,
     );
   }
 
-  /// Convert PostModel to Map for Firestore
-  Map<String, dynamic> toMap() {
+  /// Convert PostModel to JSON for Supabase
+  Map<String, dynamic> toJson() {
     return {
-      'userId': userId,
+      'user_id': userId,
       'title': title,
       'description': description,
       'category': category,
       'location': location,
       'type': type,
-      'imageUrls': imageUrls,
+      'image_urls': imageUrls,
       'rating': rating,
-      'viewCount': viewCount,
-      'isFavorite': isFavorite,
+      'view_count': viewCount,
       'status': status,
-      'createdAt': createdAt != null
-          ? Timestamp.fromDate(createdAt!)
-          : FieldValue.serverTimestamp(),
-      'updatedAt': updatedAt != null
-          ? Timestamp.fromDate(updatedAt!)
-          : FieldValue.serverTimestamp(),
     };
   }
 

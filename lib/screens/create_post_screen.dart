@@ -5,7 +5,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import '../services/database_service.dart';
 import '../services/storage_service.dart';
 import '../widgets/location_picker_map.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:latlong2/latlong.dart';
 
 class CreatePostScreen extends StatefulWidget {
   const CreatePostScreen({super.key});

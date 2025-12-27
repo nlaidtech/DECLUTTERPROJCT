@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import '../widgets/category_button.dart';
 import '../widgets/giveaway_card.dart';
 import '../widgets/available_item_tile.dart';
@@ -218,7 +217,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ],
                   ),
                   const SizedBox(height: 12),
-                  StreamBuilder<QuerySnapshot>(
+                  StreamBuilder<List<Map<String, dynamic>>>(
                     stream: _databaseService.getPosts(
                       type: 'giveaway',
                       status: 'active',
@@ -242,7 +241,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         return const Center(child: CircularProgressIndicator());
                       }
 
-                      final posts = snapshot.data?.docs ?? [];
+                      final posts = snapshot.data ?? [];
 
                       if (posts.isEmpty) {
                         return const Padding(
@@ -257,13 +256,12 @@ class _HomeScreenState extends State<HomeScreen> {
                       return SingleChildScrollView(
                         scrollDirection: Axis.horizontal,
                         child: Row(
-                          children: posts.take(5).map((doc) {
-                            final data = doc.data() as Map<String, dynamic>;
+                          children: posts.take(5).map((data) {
                             final title = data['title'] ?? 'Untitled';
                             final rating = (data['rating'] ?? 0.0).toDouble();
                             final location = data['location'] ?? 'Unknown';
                             final imageUrls = List<String>.from(
-                              data['imageUrls'] ?? [],
+                              data['image_urls'] ?? [],
                             );
                             final imageUrl = imageUrls.isNotEmpty
                                 ? imageUrls.first
@@ -330,7 +328,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ],
             ),
             const SizedBox(height: 12),
-            StreamBuilder<QuerySnapshot>(
+            StreamBuilder<List<Map<String, dynamic>>>(
               stream: _databaseService.getPosts(
                 type: 'available',
                 status: 'active',
@@ -351,7 +349,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   return const Center(child: CircularProgressIndicator());
                 }
 
-                final posts = snapshot.data?.docs ?? [];
+                final posts = snapshot.data ?? [];
 
                 if (posts.isEmpty) {
                   return const Padding(
@@ -364,15 +362,14 @@ class _HomeScreenState extends State<HomeScreen> {
                 }
 
                 return Column(
-                  children: posts.take(3).map((doc) {
-                    final data = doc.data() as Map<String, dynamic>;
+                  children: posts.take(3).map((data) {
                     final title = data['title'] ?? 'Untitled';
                     final rating = (data['rating'] ?? 0.0).toDouble();
                     final location = data['location'] ?? 'Unknown';
                     final subtitle =
                         '$location • ${rating.toStringAsFixed(1)} ★';
                     final imageUrls = List<String>.from(
-                      data['imageUrls'] ?? [],
+                      data['image_urls'] ?? [],
                     );
                     final imageUrl = imageUrls.isNotEmpty
                         ? imageUrls.first

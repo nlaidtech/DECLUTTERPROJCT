@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
 import '../services/location_service.dart';
 
@@ -18,8 +19,8 @@ class LocationPickerMap extends StatefulWidget {
 }
 
 class _LocationPickerMapState extends State<LocationPickerMap> {
-  GoogleMapController? _mapController;
-  LatLng _selectedPosition = const LatLng(37.7749, -122.4194); // Default: San Francisco
+  final MapController? _mapController = MapController();
+  LatLng _selectedPosition = LatLng(7.3697, 125.6517); // Default: Panabo City
   String _selectedAddress = '';
   bool _isLoading = false;
   final LocationService _locationService = LocationService();
@@ -46,9 +47,7 @@ class _LocationPickerMapState extends State<LocationPickerMap> {
         _selectedPosition = newPosition;
       });
       
-      _mapController?.animateCamera(
-        CameraUpdate.newLatLngZoom(newPosition, 15),
-      );
+      _mapController?.move(newPosition, 15);
       
       await _getAddressFromPosition(newPosition);
     } catch (e) {
@@ -82,7 +81,7 @@ class _LocationPickerMapState extends State<LocationPickerMap> {
     }
   }
 
-  void _onMapTapped(LatLng position) {
+  void _onMapTapped(TapPosition tapPosition, LatLng position) {
     setState(() {
       _selectedPosition = position;
     });
@@ -111,32 +110,34 @@ class _LocationPickerMapState extends State<LocationPickerMap> {
       ),
       body: Stack(
         children: [
-          // Google Map
-          GoogleMap(
-            initialCameraPosition: CameraPosition(
-              target: _selectedPosition,
-              zoom: 15,
+          // OpenStreetMap
+          FlutterMap(
+            mapController: _mapController,
+            options: MapOptions(
+              initialCenter: _selectedPosition,
+              initialZoom: 15,
+              onTap: _onMapTapped,
             ),
-            onMapCreated: (controller) {
-              _mapController = controller;
-            },
-            onTap: _onMapTapped,
-            markers: {
-              Marker(
-                markerId: const MarkerId('selected_location'),
-                position: _selectedPosition,
-                draggable: true,
-                onDragEnd: (newPosition) {
-                  setState(() {
-                    _selectedPosition = newPosition;
-                  });
-                  _getAddressFromPosition(newPosition);
-                },
+            children: [
+              TileLayer(
+                urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                userAgentPackageName: 'com.declutter.app',
               ),
-            },
-            myLocationEnabled: true,
-            myLocationButtonEnabled: false,
-            zoomControlsEnabled: false,
+              MarkerLayer(
+                markers: [
+                  Marker(
+                    point: _selectedPosition,
+                    width: 80,
+                    height: 80,
+                    child: const Icon(
+                      Icons.location_pin,
+                      size: 50,
+                      color: Colors.red,
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
 
           // Address Display Card

@@ -12,6 +12,15 @@
 .swiftpm/
 migrate_working_dir/
 
+# Environment variables (SENSITIVE - never commit!)
+.env
+.env.local
+.env.*.local
+*.env
+
+# MCP configuration (contains sensitive tokens)
+.vscode/mcp.json
+
 # IntelliJ related
 *.iml
 *.ipr

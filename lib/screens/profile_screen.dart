@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../services/auth_service.dart';
+import '../main.dart';
 
 /// Profile Screen
 ///
@@ -20,7 +21,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   void initState() {
     super.initState();
-    _currentUser = FirebaseAuth.instance.currentUser;
+    _currentUser = supabase.auth.currentUser;
   }
 
   Future<void> _logout() async {
@@ -55,7 +56,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final userName = _currentUser?.displayName ?? 'User';
+    final userName = _currentUser?.userMetadata?['name'] ?? _currentUser?.email?.split('@')[0] ?? 'User';
     final userEmail = _currentUser?.email ?? 'user@example.com';
 
     return Scaffold(
