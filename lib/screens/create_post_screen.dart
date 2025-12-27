@@ -4,6 +4,8 @@ import 'dart:io';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import '../services/database_service.dart';
 import '../services/storage_service.dart';
+import '../widgets/location_picker_map.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 class CreatePostScreen extends StatefulWidget {
   const CreatePostScreen({super.key});
@@ -21,6 +23,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
   String _selectedCategory = 'Give Away';
   final List<String> _categories = ['Give Away', 'Available Now'];
   final List<PlatformFile> _selectedImages = [];
+  LatLng? _selectedLatLng;
 
   @override
   void dispose() {
@@ -455,30 +458,53 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
 
             const SizedBox(height: 16),
 
-            // Location
-            TextFormField(
-              controller: _locationController,
-              decoration: InputDecoration(
-                labelText: 'Location',
-                hintText: 'Your area or city',
-                prefixIcon: const Icon(Icons.location_on_outlined),
-                filled: true,
-                fillColor: Colors.white,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none,
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: Colors.grey[200]!),
+            // Location with Map Picker
+            GestureDetector(
+              onTap: () async {
+                final result = await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => LocationPickerMap(
+                      initialAddress: _locationController.text,
+                      initialPosition: _selectedLatLng,
+                    ),
+                  ),
+                );
+
+                if (result != null) {
+                  setState(() {
+                    _locationController.text = result['address'];
+                    _selectedLatLng = result['position'];
+                  });
+                }
+              },
+              child: AbsorbPointer(
+                child: TextFormField(
+                  controller: _locationController,
+                  decoration: InputDecoration(
+                    labelText: 'Location',
+                    hintText: 'Tap to select location on map',
+                    prefixIcon: const Icon(Icons.location_on_outlined),
+                    suffixIcon: const Icon(Icons.map, color: Color(0xFF4CAF50)),
+                    filled: true,
+                    fillColor: Colors.white,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: Colors.grey[200]!),
+                    ),
+                  ),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please select location';
+                    }
+                    return null;
+                  },
                 ),
               ),
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Please enter location';
-                }
-                return null;
-              },
             ),
 
             const SizedBox(height: 24),
