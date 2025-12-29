@@ -53,8 +53,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           _nameController.text = profile['display_name'] ?? _currentUser?.userMetadata?['name'] ?? '';
           _bioController.text = profile['bio'] ?? '';
           _locationController.text = profile['location'] ?? 'PANABO';
-          _phoneController.text = profile['phone'] ?? '';
-          _
+          _isLoading = false;
+        });
       } else if (mounted) {
         // Use metadata if no profile exists yet
         setState(() {
