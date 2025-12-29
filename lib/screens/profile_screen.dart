@@ -17,11 +17,28 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> {
   final _authService = AuthService();
   User? _currentUser;
+  Map<String, dynamic>? _userProfile;
+  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
+    _loadProfile();
+  }
+
+  Future<void> _loadProfile() async {
     _currentUser = supabase.auth.currentUser;
+    if (_currentUser != null) {
+      final profile = await _authService.getUserProfile(_currentUser!.id);
+      if (mounted) {
+        setState(() {
+          _userProfile = profile;
+          _isLoading = false;
+        });
+      }
+    } else {
+      setState(() => _isLoading = false);
+    }
   }
 
   Future<void> _logout() async {
@@ -56,8 +73,29 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final userName = _currentUser?.userMetadata?['name'] ?? _currentUser?.email?.split('@')[0] ?? 'User';
+    final userName = _userProfile?['display_name'] ?? _currentUser?.userMetadata?['name'] ?? _currentUser?.email?.split('@')[0] ?? 'User';
     final userEmail = _currentUser?.email ?? 'user@example.com';
+    final userBio = _userProfile?['bio'] ?? '';
+    final userLocation = _userProfile?['location'] ?? 'PANABO';
+
+    if (_isLoading) {
+      return Scaffold(
+        backgroundColor: Colors.grey[50],
+        appBar: AppBar(
+          backgroundColor: Colors.white,
+          elevation: 0,
+          title: const Text(
+            'Profile',
+            style: TextStyle(
+              color: Colors.black,
+              fontWeight: FontWeight.bold,
+              fontSize: 20,
+            ),
+          ),
+        ),
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
 
     return Scaffold(
       backgroundColor: Colors.grey[50],
@@ -128,6 +166,41 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       color: Colors.grey[600],
                     ),
                   ),
+                  
+                  // Location
+                  if (userLocation.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.location_on, size: 14, color: Colors.grey[600]),
+                        const SizedBox(width: 4),
+                        Text(
+                          userLocation,
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                  
+                  // Bio
+                  if (userBio.isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    Text(
+                      userBio,
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey[700],
+                      ),
+                      textAlign: TextAlign.center,
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                  
                   const SizedBox(height: 20),
                   
                   // Edit Profile Button
@@ -136,9 +209,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       final updated = await Navigator.pushNamed(context, '/edit-profile');
                       if (updated == true && mounted) {
                         // Refresh the profile screen
-                        setState(() {
-                          _currentUser = supabase.auth.currentUser;
-                        });
+                        await _loadProfile();
                       }
                     },
                     icon: const Icon(Icons.edit_outlined),
@@ -243,7 +314,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   _MenuTile(
                     icon: Icons.location_on_outlined,
                     title: 'Location',
-                    subtitle: 'PANABO',
+                    subtitle: userLocation,
                     onTap: () {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(content: Text('Location settings coming soon!')),

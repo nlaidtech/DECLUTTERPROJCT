@@ -76,17 +76,31 @@ class AuthService {
           .from('profiles')
           .select()
           .eq('id', userId)
-          .single();
+          .maybeSingle();
       return response;
     } on PostgrestException catch (e) {
-      throw 'Error fetching profile: ${e.message}';
+      print('Error fetching profile: ${e.message}');
+      return null;
     }
   }
 
   /// Update user profile
   Future<void> updateUserProfile(String userId, Map<String, dynamic> updates) async {
     try {
-      await supabase.from('profiles').update(updates).eq('id', userId);
+      // First check if profile exists
+      final existing = await getUserProfile(userId);
+      
+      if (existing == null) {
+        // Create new profile if it doesn't exist
+        await supabase.from('profiles').insert({
+          'id': userId,
+          'email': currentUser?.email ?? '',
+          ...updates,
+        });
+      } else {
+        // Update existing profile
+        await supabase.from('profiles').update(updates).eq('id', userId);
+      }
     } on PostgrestException catch (e) {
       throw 'Error updating profile: ${e.message}';
     }
