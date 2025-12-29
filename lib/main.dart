@@ -12,6 +12,8 @@ import 'screens/profile_screen.dart';
 import 'screens/search_screen.dart';
 import 'screens/edit_profile_screen.dart';
 import 'screens/my_posts_screen.dart';
+import 'screens/notifications_screen.dart';
+import 'screens/activity_history_screen.dart';
 import 'services/favorites_service.dart';
 
 void main() async {
@@ -74,6 +76,8 @@ class _MyAppState extends State<MyApp> {
         '/search': (context) => const SearchScreen(),
         '/edit-profile': (context) => const EditProfileScreen(),
         '/my-posts': (context) => const MyPostsScreen(),
+        '/notifications': (context) => const NotificationsScreen(),
+        '/activity-history': (context) => const ActivityHistoryScreen(),
       },
     );
   }

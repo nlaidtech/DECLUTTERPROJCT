@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'activity_service.dart';
 
 /// FavoritesService
 ///
@@ -34,27 +35,44 @@ class FavoritesService with ChangeNotifier {
   bool isFavorite(String itemTitle) => _favorites.contains(itemTitle);
 
   // Add an item to favorites
-  void addFavorite(String itemTitle) {
+  void addFavorite(String itemTitle, {String? postId, String? imageUrl}) {
     if (!_favorites.contains(itemTitle)) {
       _favorites.add(itemTitle);
       notifyListeners(); // Notify all listeners (widgets) of the change
+      
+      // Log activity
+      if (postId != null) {
+        ActivityHistoryService().logPostSaved(
+          postId: postId,
+          postTitle: itemTitle,
+          postImage: imageUrl,
+        );
+      }
     }
   }
 
   // Remove an item from favorites
-  void removeFavorite(String itemTitle) {
+  void removeFavorite(String itemTitle, {String? postId}) {
     if (_favorites.contains(itemTitle)) {
       _favorites.remove(itemTitle);
       notifyListeners();
+      
+      // Log activity
+      if (postId != null) {
+        ActivityHistoryService().logPostUnsaved(
+          postId: postId,
+          postTitle: itemTitle,
+        );
+      }
     }
   }
 
   // Toggle an item's favorite status
-  void toggleFavorite(String itemTitle) {
+  void toggleFavorite(String itemTitle, {String? postId, String? imageUrl}) {
     if (isFavorite(itemTitle)) {
-      removeFavorite(itemTitle);
+      removeFavorite(itemTitle, postId: postId);
     } else {
-      addFavorite(itemTitle);
+      addFavorite(itemTitle, postId: postId, imageUrl: imageUrl);
     }
   }
 

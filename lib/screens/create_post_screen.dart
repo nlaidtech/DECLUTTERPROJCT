@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import '../services/database_service.dart';
 import '../services/storage_service.dart';
+import '../services/activity_service.dart';
 import '../widgets/location_picker_map.dart';
 import 'package:latlong2/latlong.dart';
 
@@ -171,6 +172,13 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
         );
 
         print('Post created successfully with ID: $postId');
+
+        // Log activity
+        await ActivityHistoryService().logPostCreated(
+          postId: postId,
+          postTitle: _titleController.text.trim(),
+          postImage: imageUrls.isNotEmpty ? imageUrls.first : null,
+        );
 
         // Hide loading indicator
         if (mounted) Navigator.pop(context);

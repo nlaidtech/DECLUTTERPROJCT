@@ -292,9 +292,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     title: 'Activity History',
                     subtitle: 'View your activity timeline',
                     onTap: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Activity history coming soon!')),
-                      );
+                      Navigator.pushNamed(context, '/activity-history');
                     },
                   ),
                   _buildDivider(),
@@ -303,9 +301,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     title: 'Notifications',
                     subtitle: 'Manage notification preferences',
                     onTap: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Notifications coming soon!')),
-                      );
+                      Navigator.pushNamed(context, '/notifications');
                     },
                   ),
                   _buildDivider(),
