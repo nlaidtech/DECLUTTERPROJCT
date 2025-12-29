@@ -232,7 +232,7 @@ class _ActivityHistoryScreenState extends State<ActivityHistoryScreen> {
               label: Text(filter['label'] as String),
               selected: isSelected,
               onSelected: (selected) {
-                _loadFilteredActivity(selected ? filter['value'] as String? : null);
+                _loadFilteredActivity(selected ? filter['value'] as String : null);
               },
               selectedColor: Theme.of(context).primaryColor,
               labelStyle: TextStyle(

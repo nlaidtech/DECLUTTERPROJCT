@@ -334,9 +334,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     icon: Icons.help_outline,
                     title: 'Help & Support',
                     onTap: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Help & support coming soon!')),
-                      );
+                      Navigator.pushNamed(context, '/help-support');
                     },
                   ),
                   _buildDivider(),
@@ -344,9 +342,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     icon: Icons.privacy_tip_outlined,
                     title: 'Privacy Policy',
                     onTap: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Privacy policy coming soon!')),
-                      );
+                      Navigator.pushNamed(context, '/privacy-policy');
                     },
                   ),
                   _buildDivider(),
@@ -354,21 +350,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     icon: Icons.info_outline,
                     title: 'About',
                     onTap: () {
-                      showAboutDialog(
-                        context: context,
-                        applicationName: 'Declutter',
-                        applicationVersion: '1.0.0',
-                        applicationIcon: Icon(
-                          Icons.recycling,
-                          size: 48,
-                          color: theme.primaryColor,
-                        ),
-                        children: [
-                          const Text(
-                            'Declutter helps you give items a second life by connecting with people in your community.',
-                          ),
-                        ],
-                      );
+                      Navigator.pushNamed(context, '/about');
                     },
                   ),
                 ],
