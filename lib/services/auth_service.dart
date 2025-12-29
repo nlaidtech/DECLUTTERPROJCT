@@ -73,7 +73,7 @@ class AuthService {
   Future<Map<String, dynamic>?> getUserProfile(String userId) async {
     try {
       final response = await supabase
-          .from('users')
+          .from('profiles')
           .select()
           .eq('id', userId)
           .single();
@@ -86,7 +86,7 @@ class AuthService {
   /// Update user profile
   Future<void> updateUserProfile(String userId, Map<String, dynamic> updates) async {
     try {
-      await supabase.from('users').update(updates).eq('id', userId);
+      await supabase.from('profiles').update(updates).eq('id', userId);
     } on PostgrestException catch (e) {
       throw 'Error updating profile: ${e.message}';
     }

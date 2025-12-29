@@ -132,10 +132,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   
                   // Edit Profile Button
                   OutlinedButton.icon(
-                    onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Edit profile coming soon!')),
-                      );
+                    onPressed: () async {
+                      final updated = await Navigator.pushNamed(context, '/edit-profile');
+                      if (updated == true && mounted) {
+                        // Refresh the profile screen
+                        setState(() {
+                          _currentUser = supabase.auth.currentUser;
+                        });
+                      }
                     },
                     icon: const Icon(Icons.edit_outlined),
                     label: const Text('Edit Profile'),
