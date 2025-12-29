@@ -70,11 +70,26 @@ class DatabaseService {
     String? category,
     String? status,
   }) {
-    var query = supabase.from('posts').stream(primaryKey: ['id']);
-
-    // Note: Supabase Realtime doesn't support .eq() chaining on streams
-    // For filtered data, use regular queries instead
-    return query;
+    // Stream all posts and filter in the map
+    return supabase
+        .from('posts')
+        .stream(primaryKey: ['id'])
+        .order('created_at', ascending: false)
+        .map((posts) {
+          var filtered = posts;
+          
+          if (type != null) {
+            filtered = filtered.where((post) => post['type'] == type).toList();
+          }
+          if (category != null) {
+            filtered = filtered.where((post) => post['category'] == category).toList();
+          }
+          if (status != null) {
+            filtered = filtered.where((post) => post['status'] == status).toList();
+          }
+          
+          return filtered;
+        });
   }
 
   /// Get all posts as a one-time query (with filters)

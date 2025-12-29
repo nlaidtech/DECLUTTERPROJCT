@@ -217,8 +217,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     ],
                   ),
                   const SizedBox(height: 12),
-                  StreamBuilder<List<Map<String, dynamic>>>(
-                    stream: _databaseService.getPosts(
+                  FutureBuilder<List<Map<String, dynamic>>>(
+                    future: _databaseService.getPostsOnce(
                       type: 'giveaway',
                       status: 'active',
                     ),
@@ -328,8 +328,8 @@ class _HomeScreenState extends State<HomeScreen> {
               ],
             ),
             const SizedBox(height: 12),
-            StreamBuilder<List<Map<String, dynamic>>>(
-              stream: _databaseService.getPosts(
+            FutureBuilder<List<Map<String, dynamic>>>(
+              future: _databaseService.getPostsOnce(
                 type: 'available',
                 status: 'active',
               ),

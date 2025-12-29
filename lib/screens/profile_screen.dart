@@ -283,9 +283,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     title: 'My Posts',
                     subtitle: 'View and manage your posts',
                     onTap: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('My posts coming soon!')),
-                      );
+                      Navigator.pushNamed(context, '/my-posts');
                     },
                   ),
                   _buildDivider(),

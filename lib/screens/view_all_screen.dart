@@ -123,10 +123,10 @@ class _ViewAllScreenState extends State<ViewAllScreen> {
             ),
           ),
 
-          // Items List/Grid with StreamBuilder
+          // Items List/Grid with FutureBuilder
           Expanded(
-            child: StreamBuilder<List<Map<String, dynamic>>>(
-              stream: _databaseService.getPosts(
+            child: FutureBuilder<List<Map<String, dynamic>>>(
+              future: _databaseService.getPostsOnce(
                 type: widget.categoryType,
                 status: 'active',
               ),
@@ -162,13 +162,6 @@ class _ViewAllScreenState extends State<ViewAllScreen> {
                     ),
                   );
                 }
-
-                // Update item count
-                WidgetsBinding.instance.addPostFrameCallback((_) {
-                  if (mounted) {
-                    setState(() {});
-                  }
-                });
 
                 return _isGridView 
                   ? _buildGridView(posts) 
