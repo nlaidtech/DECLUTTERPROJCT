@@ -192,7 +192,6 @@ class _SearchScreenState extends State<SearchScreen> {
               itemBuilder: (context, index) {
                 return GiveAwayCard(
                   _allItems[index],
-                  4.0 + (index % 5) * 0.2,
                   _favoritesService,
                 );
               },
@@ -238,7 +237,7 @@ class _SearchScreenState extends State<SearchScreen> {
           padding: const EdgeInsets.only(bottom: 12),
           child: AvailableItemTile(
             item,
-            '${(index * 0.5 + 1).toFixed(1)} km away • ${(4.0 + index % 5 * 0.2).toFixed(1)} ★',
+            '${(index * 0.5 + 1).toFixed(1)} km away',
             _favoritesService,
           ),
         );

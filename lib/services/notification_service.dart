@@ -137,6 +137,32 @@ class NotificationService {
     );
   }
 
+  /// Create notification when someone requests an item
+  Future<void> notifyItemRequested({
+    required String itemOwnerId,
+    required String itemId,
+    required String itemTitle,
+    String? itemImage,
+  }) async {
+    if (currentUserId == null || itemOwnerId == currentUserId) return;
+
+    final currentUser = supabase.auth.currentUser;
+    final requesterName = currentUser?.userMetadata?['name'] as String? ?? 
+                         currentUser?.email?.split('@')[0] ?? 
+                         'Someone';
+
+    await createNotification(
+      userId: itemOwnerId,
+      type: 'item_request',
+      title: 'Item Request',
+      message: '$requesterName is interested in "$itemTitle"',
+      relatedItemId: itemId,
+      relatedUserId: currentUserId,
+      relatedUserName: requesterName,
+      imageUrl: itemImage,
+    );
+  }
+
   // ==================== UPDATE NOTIFICATIONS ====================
 
   /// Mark a notification as read

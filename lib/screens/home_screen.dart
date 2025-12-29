@@ -258,8 +258,9 @@ class _HomeScreenState extends State<HomeScreen> {
                         child: Row(
                           children: posts.take(5).map((data) {
                             final title = data['title'] ?? 'Untitled';
-                            final rating = (data['rating'] ?? 0.0).toDouble();
                             final location = data['location'] ?? 'Unknown';
+                            final postId = data['id'];
+                            final userId = data['user_id'];
                             final imageUrls = List<String>.from(
                               data['image_urls'] ?? [],
                             );
@@ -269,7 +270,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
                             return GiveAwayCard(
                               title,
-                              rating,
                               favoritesService,
                               imageUrl: imageUrl,
                               onTap: () {
@@ -278,8 +278,12 @@ class _HomeScreenState extends State<HomeScreen> {
                                   MaterialPageRoute(
                                     builder: (_) => ItemDetailScreen(
                                       itemTitle: title,
-                                      rating: rating,
                                       location: location,
+                                      postId: postId,
+                                      userId: userId,
+                                      userName: 'Demo User',
+                                      userEmail: 'demouser@example.com',
+                                      memberSince: DateTime(2023),
                                     ),
                                   ),
                                 );
@@ -364,10 +368,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 return Column(
                   children: posts.take(3).map((data) {
                     final title = data['title'] ?? 'Untitled';
-                    final rating = (data['rating'] ?? 0.0).toDouble();
                     final location = data['location'] ?? 'Unknown';
-                    final subtitle =
-                        '$location • ${rating.toStringAsFixed(1)} ★';
+                    final postId = data['id'];
+                    final userId = data['user_id'];
+                    final subtitle = location;
                     final imageUrls = List<String>.from(
                       data['image_urls'] ?? [],
                     );
@@ -388,8 +392,12 @@ class _HomeScreenState extends State<HomeScreen> {
                             MaterialPageRoute(
                               builder: (_) => ItemDetailScreen(
                                 itemTitle: title,
-                                rating: rating,
                                 location: location,
+                                postId: postId,
+                                userId: userId,
+                                userName: 'Available User',
+                                userEmail: 'available@example.com',
+                                memberSince: DateTime(2024),
                               ),
                             ),
                           );

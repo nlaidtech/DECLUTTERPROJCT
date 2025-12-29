@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/favorites_service.dart';
+import '../services/notification_service.dart';
+import '../main.dart';
 
 /// Item Detail Screen
 ///
@@ -12,15 +14,25 @@ import '../services/favorites_service.dart';
 class ItemDetailScreen extends StatefulWidget {
   final String itemTitle;
   final String? itemDescription;
-  final double? rating;
   final String? location;
+  final String? postId;
+  final String? userId;
+  final String? userName;
+  final String? userEmail;
+  final DateTime? memberSince;
+  final bool showActions; // Show Edit/Delete buttons only from My Posts
 
   const ItemDetailScreen({
     super.key,
     required this.itemTitle,
     this.itemDescription,
-    this.rating,
     this.location,
+    this.postId,
+    this.userId,
+    this.userName,
+    this.userEmail,
+    this.memberSince,
+    this.showActions = false, // Default to false (hide actions)
   });
 
   @override
@@ -33,6 +45,8 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
   
   // Sample images (in real app, these would be actual images)
   final List<String> _images = ['1', '2', '3'];
+  
+  bool get isOwner => supabase.auth.currentUser?.id == widget.userId;
 
   @override
   Widget build(BuildContext context) {
@@ -170,21 +184,9 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                       
                       const SizedBox(height: 12),
                       
-                      // Rating and Location
+                      // Location
                       Row(
                         children: [
-                          if (widget.rating != null) ...[
-                            Icon(Icons.star, size: 20, color: Colors.amber[600]),
-                            const SizedBox(width: 4),
-                            Text(
-                              widget.rating!.toStringAsFixed(1),
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            const SizedBox(width: 16),
-                          ],
                           Icon(Icons.location_on, size: 20, color: theme.primaryColor),
                           const SizedBox(width: 4),
                           Text(
@@ -246,10 +248,10 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                       
                       const SizedBox(height: 32),
                       
-                      // Seller Information
-                      const Text(
-                        'Seller Information',
-                        style: TextStyle(
+                      // Giver Information
+                      Text(
+                        isOwner ? 'Your Post' : 'Giver Information',
+                        style: const TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
                         ),
@@ -268,7 +270,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                               radius: 28,
                               backgroundColor: theme.primaryColor.withOpacity(0.2),
                               child: Text(
-                                'J',
+                                (widget.userName ?? widget.userEmail ?? 'U')[0].toUpperCase(),
                                 style: TextStyle(
                                   fontSize: 24,
                                   fontWeight: FontWeight.bold,
@@ -281,46 +283,35 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  const Text(
-                                    'John Doe',
-                                    style: TextStyle(
+                                  Text(
+                                    widget.userName ?? widget.userEmail?.split('@')[0] ?? 'User',
+                                    style: const TextStyle(
                                       fontSize: 16,
                                       fontWeight: FontWeight.w600,
                                     ),
                                   ),
                                   const SizedBox(height: 4),
-                                  Row(
-                                    children: [
-                                      Icon(Icons.star, size: 16, color: Colors.amber[600]),
-                                      const SizedBox(width: 4),
-                                      const Text(
-                                        '4.8',
-                                        style: TextStyle(
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.w500,
-                                        ),
-                                      ),
-                                      const SizedBox(width: 8),
-                                      Text(
-                                        '• Member since 2023',
-                                        style: TextStyle(
-                                          fontSize: 13,
-                                          color: Colors.grey[600],
-                                        ),
-                                      ),
-                                    ],
+                                  Text(
+                                    widget.memberSince != null
+                                        ? 'Member since ${widget.memberSince!.year}'
+                                        : 'New member',
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      color: Colors.grey[600],
+                                    ),
                                   ),
                                 ],
                               ),
                             ),
-                            IconButton(
-                              icon: const Icon(Icons.chevron_right),
-                              onPressed: () {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('Seller profile coming soon!')),
-                                );
-                              },
-                            ),
+                            if (!isOwner)
+                              IconButton(
+                                icon: const Icon(Icons.chevron_right),
+                                onPressed: () {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text('User profile coming soon!')),
+                                  );
+                                },
+                              ),
                           ],
                         ),
                       ),
@@ -334,69 +325,177 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
           ),
           
           // Bottom Action Buttons
-          Positioned(
-            bottom: 0,
-            left: 0,
-            right: 0,
-            child: Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
-                    blurRadius: 10,
-                    offset: const Offset(0, -2),
-                  ),
-                ],
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: () {
-                        Navigator.pushNamed(context, '/message');
-                      },
-                      icon: const Icon(Icons.message_outlined),
-                      label: const Text('Message'),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: theme.primaryColor,
-                        side: BorderSide(color: theme.primaryColor),
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
+          if (!isOwner)
+            Positioned(
+              bottom: 0,
+              left: 0,
+              right: 0,
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 10,
+                      offset: const Offset(0, -2),
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Request sent! The seller will contact you soon.'),
-                            backgroundColor: Color(0xFF4CAF50),
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () {
+                          Navigator.pushNamed(context, '/message');
+                        },
+                        icon: const Icon(Icons.message_outlined),
+                        label: const Text('Message'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: theme.primaryColor,
+                          side: BorderSide(color: theme.primaryColor),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
                           ),
-                        );
-                      },
-                      icon: const Icon(Icons.check_circle_outline),
-                      label: const Text('Request'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: theme.primaryColor,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
                         ),
                       ),
                     ),
-                  ),
-                ],
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: () async {
+                          // Send notification to item owner
+                          if (widget.userId != null && widget.postId != null) {
+                            try {
+                              await NotificationService().notifyItemRequested(
+                                itemOwnerId: widget.userId!,
+                                itemId: widget.postId!,
+                                itemTitle: widget.itemTitle,
+                                itemImage: null, // Could add image URL if available
+                              );
+                              
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Request sent! The giver will be notified.'),
+                                    backgroundColor: Color(0xFF4CAF50),
+                                  ),
+                                );
+                              }
+                            } catch (e) {
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Error sending request: $e'),
+                                    backgroundColor: Colors.red,
+                                  ),
+                                );
+                              }
+                            }
+                          }
+                        },
+                        icon: const Icon(Icons.check_circle_outline),
+                        label: const Text('Request'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: theme.primaryColor,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
+          // Owner Action Buttons - only show when showActions is true (from My Posts)
+          if (isOwner && widget.showActions)
+            Positioned(
+              bottom: 0,
+              left: 0,
+              right: 0,
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 10,
+                      offset: const Offset(0, -2),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Edit feature coming soon!')),
+                          );
+                        },
+                        icon: const Icon(Icons.edit_outlined),
+                        label: const Text('Edit'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: theme.primaryColor,
+                          side: BorderSide(color: theme.primaryColor),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () {
+                          showDialog(
+                            context: context,
+                            builder: (context) => AlertDialog(
+                              title: const Text('Delete Post'),
+                              content: const Text('Are you sure you want to delete this post?'),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.pop(context),
+                                  child: const Text('Cancel'),
+                                ),
+                                TextButton(
+                                  onPressed: () {
+                                    Navigator.pop(context);
+                                    Navigator.pop(context);
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(content: Text('Post deleted')),
+                                    );
+                                  },
+                                  style: TextButton.styleFrom(foregroundColor: Colors.red),
+                                  child: const Text('Delete'),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                        icon: const Icon(Icons.delete_outline),
+                        label: const Text('Delete'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.red,
+                          side: const BorderSide(color: Colors.red),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
         ],
       ),
     );

@@ -29,7 +29,7 @@ class _ViewAllScreenState extends State<ViewAllScreen> {
   String _sortBy = 'Recent';
   bool _isGridView = false;
 
-  final List<String> _sortOptions = ['Recent', 'Distance', 'Rating'];
+  final List<String> _sortOptions = ['Recent', 'Distance'];
 
   @override
   Widget build(BuildContext context) {
@@ -187,14 +187,14 @@ class _ViewAllScreenState extends State<ViewAllScreen> {
       itemBuilder: (context, index) {
         final post = posts[index];
         final title = post['title'] ?? 'Untitled';
-        final rating = (post['rating'] ?? 0.0).toDouble();
         final location = post['location'] ?? 'Unknown';
+        final postId = post['id'];
+        final userId = post['user_id'];
         final imageUrls = List<String>.from(post['image_urls'] ?? []);
         final imageUrl = imageUrls.isNotEmpty ? imageUrls.first : null;
 
         return GiveAwayCard(
           title,
-          rating,
           _favoritesService,
           imageUrl: imageUrl,
           onTap: () {
@@ -203,8 +203,12 @@ class _ViewAllScreenState extends State<ViewAllScreen> {
               MaterialPageRoute(
                 builder: (_) => ItemDetailScreen(
                   itemTitle: title,
-                  rating: rating,
                   location: location,
+                  postId: postId,
+                  userId: userId,
+                  userName: 'User',
+                  userEmail: 'user@example.com',
+                  memberSince: DateTime(2023),
                 ),
               ),
             );
@@ -221,9 +225,10 @@ class _ViewAllScreenState extends State<ViewAllScreen> {
       itemBuilder: (context, index) {
         final post = posts[index];
         final title = post['title'] ?? 'Untitled';
-        final rating = (post['rating'] ?? 0.0).toDouble();
         final location = post['location'] ?? 'Unknown';
-        final subtitle = '$location • ${rating.toStringAsFixed(1)} ★';
+        final postId = post['id'];
+        final userId = post['user_id'];
+        final subtitle = location;
         final imageUrls = List<String>.from(post['image_urls'] ?? []);
         final imageUrl = imageUrls.isNotEmpty ? imageUrls.first : null;
 
@@ -240,8 +245,12 @@ class _ViewAllScreenState extends State<ViewAllScreen> {
                 MaterialPageRoute(
                   builder: (_) => ItemDetailScreen(
                     itemTitle: title,
-                    rating: rating,
                     location: location,
+                    postId: postId,
+                    userId: userId,
+                    userName: 'User',
+                    userEmail: 'user@example.com',
+                    memberSince: DateTime(2023),
                   ),
                 ),
               );

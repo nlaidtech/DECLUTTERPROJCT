@@ -215,14 +215,6 @@ class AboutScreen extends StatelessWidget {
               child: Column(
                 children: [
                   ListTile(
-                    leading: const Icon(Icons.public),
-                    title: const Text('Website'),
-                    subtitle: const Text('www.declutterapp.com'),
-                    trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                    onTap: () => _launchURL('https://www.declutterapp.com'),
-                  ),
-                  const Divider(height: 1),
-                  ListTile(
                     leading: const Icon(Icons.facebook),
                     title: const Text('Facebook'),
                     subtitle: const Text('@DeclutterApp'),
@@ -248,34 +240,17 @@ class AboutScreen extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Card(
-              child: Column(
-                children: [
-                  ListTile(
-                    leading: const Icon(Icons.description_outlined),
-                    title: const Text('Terms of Service'),
-                    trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                    onTap: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Terms of Service coming soon!'),
-                        ),
-                      );
-                    },
-                  ),
-                  const Divider(height: 1),
-                  ListTile(
-                    leading: const Icon(Icons.gavel_outlined),
-                    title: const Text('Licenses'),
-                    trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                    onTap: () {
-                      showLicensePage(
-                        context: context,
-                        applicationName: 'Declutter',
-                        applicationVersion: '1.0.0',
-                      );
-                    },
-                  ),
-                ],
+              child: ListTile(
+                leading: const Icon(Icons.description_outlined),
+                title: const Text('Terms of Service'),
+                trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                onTap: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Terms of Service coming soon!'),
+                    ),
+                  );
+                },
               ),
             ),
           ),

@@ -8,14 +8,12 @@ import '../services/favorites_service.dart';
 /// user taps the heart, the item is added/removed from the Saved screen.
 class GiveAwayCard extends StatelessWidget {
   final String title;
-  final double rating;
   final FavoritesService favoritesService;
   final VoidCallback? onTap;
   final String? imageUrl;
 
   const GiveAwayCard(
     this.title,
-    this.rating,
     this.favoritesService, {
     super.key,
     this.onTap,
@@ -105,25 +103,8 @@ class GiveAwayCard extends StatelessWidget {
                       ),
                       const SizedBox(height: 8),
                       Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        mainAxisAlignment: MainAxisAlignment.end,
                         children: [
-                          Row(
-                            children: [
-                              Icon(
-                                Icons.star,
-                                size: 14,
-                                color: Colors.amber[600],
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                rating.toString(),
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ],
-                          ),
                           // Heart icon calls favoritesService.toggleFavorite() when tapped.
                           // The icon updates instantly via ListenableBuilder rebuild.
                           IconButton(

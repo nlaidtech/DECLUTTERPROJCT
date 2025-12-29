@@ -254,15 +254,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       color: Colors.red,
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _StatCard(
-                      icon: Icons.star,
-                      title: 'Rating',
-                      value: '4.8',
-                      color: Colors.amber,
-                    ),
-                  ),
                 ],
               ),
             ),
