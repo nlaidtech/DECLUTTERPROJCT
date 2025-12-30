@@ -49,6 +49,11 @@ dependencies:
   
   # Location services
   geolocator: ^13.0.2
+  
+  # Time formatting
+  timeago: ^3.7.0
+  
+  # Geocoding and mapping
   geocoding: ^3.0.0
   flutter_map: ^7.0.2
   latlong2: ^0.9.1

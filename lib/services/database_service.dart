@@ -1,4 +1,3 @@
-import 'package:supabase_flutter/supabase_flutter.dart';
 import '../main.dart';
 
 /// Supabase Database Service
@@ -110,9 +109,25 @@ class DatabaseService {
       query = query.eq('status', status);
     }
 
-    final result = await query.order('created_at', ascending: false);
-
-    return result as List<Map<String, dynamic>>;
+    final posts = await query.order('created_at', ascending: false);
+    
+    // Fetch user profiles for each post
+    final postsWithProfiles = await Future.wait(
+      posts.map((post) async {
+        final userId = post['user_id'];
+        if (userId != null) {
+          final profile = await supabase
+              .from('profiles')
+              .select('id, email, display_name, avatar_url, created_at')
+              .eq('id', userId)
+              .maybeSingle();
+          post['profiles'] = profile;
+        }
+        return post;
+      }).toList(),
+    );
+    
+    return List<Map<String, dynamic>>.from(postsWithProfiles);
   }
 
   /// Get user's posts
@@ -188,7 +203,7 @@ class DatabaseService {
         .select('*, posts(*)')
         .eq('user_id', currentUserId!);
 
-    return response as List<Map<String, dynamic>>;
+    return List<Map<String, dynamic>>.from(response);
   }
 
   /// Check if post is favorited
@@ -212,11 +227,7 @@ class DatabaseService {
     if (currentUserId == null) throw Exception('User not logged in');
 
     // Check if conversation already exists between these users
-    final existing = await supabase
-        .from('conversation_participants')
-        .select('conversation_id')
-        .eq('user_id', currentUserId!)
-        .select();
+    // (Note: This is simplified - in production you'd check for existing conversations)
 
     // For now, create a new conversation
     final convResponse = await supabase.from('conversations').insert({
@@ -279,7 +290,7 @@ class DatabaseService {
         .eq('user_id', currentUserId!)
         .order('conversations.updated_at', ascending: false);
 
-    return response as List<Map<String, dynamic>>;
+    return List<Map<String, dynamic>>.from(response);
   }
 
   /// Mark messages as read

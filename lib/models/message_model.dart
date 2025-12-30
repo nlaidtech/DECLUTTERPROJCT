@@ -1,3 +1,5 @@
+import 'package:timeago/timeago.dart' as timeago;
+
 /// Chat Message Model - Enhanced Version
 /// 
 /// Represents a single chat message with full metadata:
@@ -67,24 +69,57 @@ class ChatMessage {
   }
 
   /// Formats timestamp to readable time (e.g., "10:30 AM")
+  /// Converts UTC to Philippines local time (UTC+8)
   String get formattedTime {
-    final hour = timestamp.hour > 12 ? timestamp.hour - 12 : timestamp.hour;
-    final period = timestamp.hour >= 12 ? 'PM' : 'AM';
-    return '${hour == 0 ? 12 : hour}:${timestamp.minute.toString().padLeft(2, '0')} $period';
+    final localTime = timestamp.toLocal(); // Convert UTC to local timezone
+    final hour = localTime.hour > 12 ? localTime.hour - 12 : localTime.hour;
+    final period = localTime.hour >= 12 ? 'PM' : 'AM';
+    return '${hour == 0 ? 12 : hour}:${localTime.minute.toString().padLeft(2, '0')} $period';
+  }
+  
+  /// Formats timestamp to relative time (e.g., "2 hours ago", "23 minutes ago")
+  /// Updates automatically in real-time
+  String get relativeTime {
+    final now = DateTime.now();
+    final difference = now.difference(timestamp);
+    
+    if (difference.inSeconds < 60) {
+      return 'just now';
+    } else if (difference.inMinutes < 60) {
+      final minutes = difference.inMinutes;
+      return '$minutes ${minutes == 1 ? 'minute' : 'minutes'} ago';
+    } else if (difference.inHours < 24) {
+      final hours = difference.inHours;
+      return '$hours ${hours == 1 ? 'hour' : 'hours'} ago';
+    } else if (difference.inDays < 7) {
+      final days = difference.inDays;
+      return '$days ${days == 1 ? 'day' : 'days'} ago';
+    } else if (difference.inDays < 30) {
+      final weeks = (difference.inDays / 7).floor();
+      return '$weeks ${weeks == 1 ? 'week' : 'weeks'} ago';
+    } else if (difference.inDays < 365) {
+      final months = (difference.inDays / 30).floor();
+      return '$months ${months == 1 ? 'month' : 'months'} ago';
+    } else {
+      final years = (difference.inDays / 365).floor();
+      return '$years ${years == 1 ? 'year' : 'years'} ago';
+    }
   }
 
   /// Formats timestamp to date (e.g., "Dec 15, 2025")
   String get formattedDate {
+    final localTime = timestamp.toLocal(); // Convert UTC to local timezone
     final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    return '${months[timestamp.month - 1]} ${timestamp.day}, ${timestamp.year}';
+    return '${months[localTime.month - 1]} ${localTime.day}, ${localTime.year}';
   }
 
   /// Checks if this message is from today
   bool get isToday {
     final now = DateTime.now();
-    return timestamp.year == now.year &&
-           timestamp.month == now.month &&
-           timestamp.day == now.day;
+    final localTime = timestamp.toLocal(); // Convert UTC to local timezone
+    return localTime.year == now.year &&
+           localTime.month == now.month &&
+           localTime.day == now.day;
   }
 
   /// Converts message to JSON format (useful for storage/API)

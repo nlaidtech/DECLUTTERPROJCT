@@ -1,13 +1,22 @@
 import 'package:flutter/material.dart';
 import 'advanced_chat_screen.dart';
+import '../services/message_service.dart';
+import 'package:timeago/timeago.dart' as timeago;
 
 /// Conversations List Screen
 /// 
 /// Shows all active chat conversations with different people
 /// Each conversation can be tapped to open individual chat
-class ConversationsScreen extends StatelessWidget {
+class ConversationsScreen extends StatefulWidget {
   const ConversationsScreen({super.key});
 
+  @override
+  State<ConversationsScreen> createState() => _ConversationsScreenState();
+}
+
+class _ConversationsScreenState extends State<ConversationsScreen> {
+  final MessageService _messageService = MessageService();
+  
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -35,100 +44,108 @@ class ConversationsScreen extends StatelessWidget {
           ),
         ],
       ),
-      body: ListView(
-        children: [
-          // Conversation with John Doe
-          _ConversationTile(
-            name: 'John Doe',
-            lastMessage: 'Perfect! I\'ll come by at 3:30 PM',
-            timestamp: '2 min ago',
-            unreadCount: 2,
-            avatarInitial: 'J',
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const AdvancedChatScreen(
-                    chatId: 'chat_john',
-                    recipientName: 'John Doe',
+      body: FutureBuilder<List<Map<String, dynamic>>>(
+        future: _messageService.getConversations().first,
+        builder: (context, snapshot) {
+          if (snapshot.hasError) {
+            return Center(
+              child: Text('Error loading conversations: ${snapshot.error}'),
+            );
+          }
+
+          if (!snapshot.hasData) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          final conversations = snapshot.data!;
+
+          if (conversations.isEmpty) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.chat_bubble_outline,
+                    size: 64,
+                    color: Colors.grey[400],
                   ),
-                ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'No conversations yet',
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Start messaging people about their items!',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey[500],
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }
+
+          return ListView.builder(
+            itemCount: conversations.length,
+            itemBuilder: (context, index) {
+              final conversation = conversations[index];
+              final lastMessageTime = conversation['last_message_time'] != null
+                  ? DateTime.parse(conversation['last_message_time'])
+                  : null;
+              
+              return _ConversationTile(
+                name: conversation['other_user_name'] ?? 'User',
+                lastMessage: conversation['last_message'] ?? 'No messages yet',
+                timestamp: lastMessageTime != null 
+                    ? _formatRelativeTime(lastMessageTime)
+                    : '',
+                unreadCount: conversation['unread_count'] ?? 0,
+                avatarInitial: (conversation['other_user_name'] ?? 'U')[0].toUpperCase(),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => AdvancedChatScreen(
+                        chatId: 'chat_${conversation['other_user_id']}',
+                        recipientName: conversation['other_user_name'] ?? 'User',
+                        recipientAvatar: conversation['other_user_avatar'],
+                      ),
+                    ),
+                  );
+                },
               );
             },
-          ),
-          
-          // Conversation with Maria Santos
-          _ConversationTile(
-            name: 'Maria Santos',
-            lastMessage: 'Hey, I\'m also interested! Is it still available?',
-            timestamp: '15 min ago',
-            unreadCount: 1,
-            avatarInitial: 'M',
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const AdvancedChatScreen(
-                    chatId: 'chat_maria',
-                    recipientName: 'Maria Santos',
-                  ),
-                ),
-              );
-            },
-          ),
-          
-          // Additional sample conversations
-          _ConversationTile(
-            name: 'Alex Chen',
-            lastMessage: 'Thanks for the lamp! It looks great 💡',
-            timestamp: '1 hour ago',
-            unreadCount: 0,
-            avatarInitial: 'A',
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const AdvancedChatScreen(
-                    chatId: 'chat_alex',
-                    recipientName: 'Alex Chen',
-                  ),
-                ),
-              );
-            },
-          ),
-          
-          _ConversationTile(
-            name: 'Sarah Johnson',
-            lastMessage: 'Is the bookshelf still available?',
-            timestamp: 'Yesterday',
-            unreadCount: 0,
-            avatarInitial: 'S',
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const AdvancedChatScreen(
-                    chatId: 'chat_sarah',
-                    recipientName: 'Sarah Johnson',
-                  ),
-                ),
-              );
-            },
-          ),
-        ],
-      ),
-      
-      // Floating action button to start new conversation
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          // Open new conversation dialog
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('New conversation feature coming soon!')),
           );
         },
-        child: const Icon(Icons.message),
       ),
     );
+  }
+  
+  /// Format timestamp to relative time without "about" prefix
+  String _formatRelativeTime(DateTime timestamp) {
+    final now = DateTime.now();
+    final difference = now.difference(timestamp);
+    
+    if (difference.inSeconds < 60) {
+      return 'just now';
+    } else if (difference.inMinutes < 60) {
+      final minutes = difference.inMinutes;
+      return '$minutes ${minutes == 1 ? 'minute' : 'minutes'} ago';
+    } else if (difference.inHours < 24) {
+      final hours = difference.inHours;
+      return '$hours ${hours == 1 ? 'hour' : 'hours'} ago';
+    } else if (difference.inDays < 7) {
+      final days = difference.inDays;
+      return '$days ${days == 1 ? 'day' : 'days'} ago';
+    } else {
+      final weeks = (difference.inDays / 7).floor();
+      return '$weeks ${weeks == 1 ? 'week' : 'weeks'} ago';
+    }
   }
 }
 

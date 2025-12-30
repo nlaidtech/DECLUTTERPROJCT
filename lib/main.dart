@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:timeago/timeago.dart' as timeago;
 import 'theme.dart';
 import 'screens/login_screen.dart';
 import 'screens/signup_screen.dart';
@@ -21,6 +22,10 @@ import 'services/favorites_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // Set locale for timeago to show full format (e.g., "2 hours ago")
+  timeago.setLocaleMessages('en', timeago.EnMessages());
+  timeago.setDefaultLocale('en');
   
   // Load environment variables
   await dotenv.load(fileName: ".env");

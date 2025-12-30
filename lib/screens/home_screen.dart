@@ -267,6 +267,16 @@ class _HomeScreenState extends State<HomeScreen> {
                             final imageUrl = imageUrls.isNotEmpty
                                 ? imageUrls.first
                                 : null;
+                            
+                            // Get user profile data from the joined profiles table
+                            final userProfile = data['profiles'] as Map<String, dynamic>?;
+                            final userName = userProfile?['display_name'] ?? 
+                                           userProfile?['email']?.split('@')[0] ?? 
+                                           'User';
+                            final userEmail = userProfile?['email'];
+                            final memberSince = userProfile?['created_at'] != null 
+                                ? DateTime.parse(userProfile!['created_at'])
+                                : null;
 
                             return GiveAwayCard(
                               title,
@@ -281,9 +291,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                       location: location,
                                       postId: postId,
                                       userId: userId,
-                                      userName: 'Demo User',
-                                      userEmail: 'demouser@example.com',
-                                      memberSince: DateTime(2023),
+                                      userName: userName,
+                                      userEmail: userEmail,
+                                      memberSince: memberSince,
                                     ),
                                   ),
                                 );
@@ -378,6 +388,16 @@ class _HomeScreenState extends State<HomeScreen> {
                     final imageUrl = imageUrls.isNotEmpty
                         ? imageUrls.first
                         : null;
+                    
+                    // Get user profile data from the joined profiles table
+                    final userProfile = data['profiles'] as Map<String, dynamic>?;
+                    final userName = userProfile?['display_name'] ?? 
+                                   userProfile?['email']?.split('@')[0] ?? 
+                                   'User';
+                    final userEmail = userProfile?['email'];
+                    final memberSince = userProfile?['created_at'] != null 
+                        ? DateTime.parse(userProfile!['created_at'])
+                        : null;
 
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 12.0),
@@ -395,9 +415,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                 location: location,
                                 postId: postId,
                                 userId: userId,
-                                userName: 'Available User',
-                                userEmail: 'available@example.com',
-                                memberSince: DateTime(2024),
+                                userName: userName,
+                                userEmail: userEmail,
+                                memberSince: memberSince,
                               ),
                             ),
                           );

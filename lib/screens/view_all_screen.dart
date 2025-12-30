@@ -192,6 +192,16 @@ class _ViewAllScreenState extends State<ViewAllScreen> {
         final userId = post['user_id'];
         final imageUrls = List<String>.from(post['image_urls'] ?? []);
         final imageUrl = imageUrls.isNotEmpty ? imageUrls.first : null;
+        
+        // Get user profile data from the joined profiles table
+        final userProfile = post['profiles'] as Map<String, dynamic>?;
+        final userName = userProfile?['display_name'] ?? 
+                       userProfile?['email']?.split('@')[0] ?? 
+                       'User';
+        final userEmail = userProfile?['email'];
+        final memberSince = userProfile?['created_at'] != null 
+            ? DateTime.parse(userProfile!['created_at'])
+            : null;
 
         return GiveAwayCard(
           title,
@@ -206,9 +216,9 @@ class _ViewAllScreenState extends State<ViewAllScreen> {
                   location: location,
                   postId: postId,
                   userId: userId,
-                  userName: 'User',
-                  userEmail: 'user@example.com',
-                  memberSince: DateTime(2023),
+                  userName: userName,
+                  userEmail: userEmail,
+                  memberSince: memberSince,
                 ),
               ),
             );
@@ -231,6 +241,16 @@ class _ViewAllScreenState extends State<ViewAllScreen> {
         final subtitle = location;
         final imageUrls = List<String>.from(post['image_urls'] ?? []);
         final imageUrl = imageUrls.isNotEmpty ? imageUrls.first : null;
+        
+        // Get user profile data from the joined profiles table
+        final userProfile = post['profiles'] as Map<String, dynamic>?;
+        final userName = userProfile?['display_name'] ?? 
+                       userProfile?['email']?.split('@')[0] ?? 
+                       'User';
+        final userEmail = userProfile?['email'];
+        final memberSince = userProfile?['created_at'] != null 
+            ? DateTime.parse(userProfile!['created_at'])
+            : null;
 
         return Padding(
           padding: const EdgeInsets.only(bottom: 12),
@@ -248,9 +268,9 @@ class _ViewAllScreenState extends State<ViewAllScreen> {
                     location: location,
                     postId: postId,
                     userId: userId,
-                    userName: 'User',
-                    userEmail: 'user@example.com',
-                    memberSince: DateTime(2023),
+                    userName: userName,
+                    userEmail: userEmail,
+                    memberSince: memberSince,
                   ),
                 ),
               );

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../services/favorites_service.dart';
 import '../services/notification_service.dart';
 import '../main.dart';
+import 'advanced_chat_screen.dart';
 
 /// Item Detail Screen
 ///
@@ -347,7 +348,20 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                     Expanded(
                       child: OutlinedButton.icon(
                         onPressed: () {
-                          Navigator.pushNamed(context, '/message');
+                          // Open chat with item poster
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => AdvancedChatScreen(
+                                chatId: 'chat_${widget.userId}',
+                                recipientName: widget.userName ?? 
+                                    widget.userEmail?.split('@')[0] ?? 
+                                    'User',
+                                recipientAvatar: null,
+                                postId: widget.postId, // Link conversation to this post
+                              ),
+                            ),
+                          );
                         },
                         icon: const Icon(Icons.message_outlined),
                         label: const Text('Message'),
