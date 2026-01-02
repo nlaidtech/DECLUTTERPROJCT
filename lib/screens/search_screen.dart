@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
-import '../widgets/giveaway_card.dart';
 import '../widgets/available_item_tile.dart';
 import '../services/favorites_service.dart';
+import '../services/database_service.dart';
+import 'item_detail_screen.dart';
 
 /// Search Screen
 ///
-/// Allows users to search for items by keywords, filter by categories,
-/// and view results in a grid or list view.
+/// Allows users to search for items by keywords from the database.
 class SearchScreen extends StatefulWidget {
   const SearchScreen({super.key});
 
@@ -17,35 +17,10 @@ class SearchScreen extends StatefulWidget {
 class _SearchScreenState extends State<SearchScreen> {
   final TextEditingController _searchController = TextEditingController();
   final FavoritesService _favoritesService = FavoritesService();
-  String _selectedCategory = 'All';
+  final DatabaseService _databaseService = DatabaseService();
   bool _isSearching = false;
-  List<String> _searchResults = [];
-
-  final List<String> _categories = [
-    'All',
-    'Sports',
-    'Electronics',
-    'Tools',
-    'Furniture',
-    'Clothing',
-    'Books',
-    'Toys',
-  ];
-
-  final List<String> _allItems = [
-    'Base Camp Tent',
-    'Google Pixel Tablet',
-    'Stainless Pot',
-    'Craftsman Cordless Drill',
-    'Office Chair',
-    'Portable Speaker',
-    'Mountain Bike',
-    'Desk Lamp',
-    'Bookshelf',
-    'Running Shoes',
-    'Coffee Maker',
-    'Gaming Console',
-  ];
+  List<Map<String, dynamic>> _searchResults = [];
+  bool _isLoading = false;
 
   @override
   void dispose() {
@@ -53,17 +28,34 @@ class _SearchScreenState extends State<SearchScreen> {
     super.dispose();
   }
 
-  void _performSearch(String query) {
+  Future<void> _performSearch(String query) async {
     setState(() {
       _isSearching = query.isNotEmpty;
-      if (query.isEmpty) {
-        _searchResults = [];
-      } else {
-        _searchResults = _allItems
-            .where((item) => item.toLowerCase().contains(query.toLowerCase()))
-            .toList();
-      }
+      _isLoading = query.isNotEmpty;
     });
+
+    if (query.isEmpty) {
+      setState(() {
+        _searchResults = [];
+        _isLoading = false;
+      });
+      return;
+    }
+
+    try {
+      // Search in database for posts matching the query
+      final results = await _databaseService.searchPosts(query);
+      setState(() {
+        _searchResults = results;
+        _isLoading = false;
+      });
+    } catch (e) {
+      print('Search error: $e');
+      setState(() {
+        _searchResults = [];
+        _isLoading = false;
+      });
+    }
   }
 
   @override
@@ -120,38 +112,6 @@ class _SearchScreenState extends State<SearchScreen> {
             ),
           ),
 
-          // Category Filter
-          Container(
-            height: 50,
-            color: Colors.white,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              itemCount: _categories.length,
-              itemBuilder: (context, index) {
-                final category = _categories[index];
-                final isSelected = _selectedCategory == category;
-                return Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: ChoiceChip(
-                    label: Text(category),
-                    selected: isSelected,
-                    onSelected: (selected) {
-                      setState(() {
-                        _selectedCategory = category;
-                      });
-                    },
-                    selectedColor: theme.primaryColor.withOpacity(0.2),
-                    labelStyle: TextStyle(
-                      color: isSelected ? theme.primaryColor : Colors.grey[700],
-                      fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
-
           const SizedBox(height: 16),
 
           // Search Results
@@ -165,40 +125,33 @@ class _SearchScreenState extends State<SearchScreen> {
 
   Widget _buildSearchResults() {
     if (!_isSearching) {
-      // Show popular items when not searching
-      return SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
+      // Show instruction when not searching
+      return Center(
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Text(
-              'Popular Items',
+            Icon(Icons.search, size: 64, color: Colors.grey[300]),
+            const SizedBox(height: 16),
+            Text(
+              'Search for items',
               style: TextStyle(
                 fontSize: 18,
-                fontWeight: FontWeight.bold,
+                color: Colors.grey[600],
+                fontWeight: FontWeight.w500,
               ),
             ),
-            const SizedBox(height: 12),
-            GridView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                childAspectRatio: 0.75,
-                crossAxisSpacing: 12,
-                mainAxisSpacing: 12,
-              ),
-              itemCount: 6,
-              itemBuilder: (context, index) {
-                return GiveAwayCard(
-                  _allItems[index],
-                  _favoritesService,
-                );
-              },
+            const SizedBox(height: 8),
+            Text(
+              'Type to find posts by title or description',
+              style: TextStyle(fontSize: 14, color: Colors.grey[500]),
             ),
           ],
         ),
       );
+    }
+
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
     }
 
     if (_searchResults.isEmpty) {
@@ -232,20 +185,59 @@ class _SearchScreenState extends State<SearchScreen> {
       padding: const EdgeInsets.all(16),
       itemCount: _searchResults.length,
       itemBuilder: (context, index) {
-        final item = _searchResults[index];
+        final post = _searchResults[index];
+        final title = post['title'] ?? 'Untitled';
+        final description = post['description'] as String?;
+        final location = post['location'] ?? 'Unknown';
+        final postId = post['id'];
+        final userId = post['user_id'];
+        final imageUrls = List<String>.from(post['image_urls'] ?? []);
+        final imageUrl = imageUrls.isNotEmpty ? imageUrls.first : null;
+        final latitude = (post['latitude'] as num?)?.toDouble();
+        final longitude = (post['longitude'] as num?)?.toDouble();
+        
+        // Get user profile data
+        final userProfile = post['profiles'] as Map<String, dynamic>?;
+        final userName = userProfile?['display_name'] ?? 
+                       userProfile?['email']?.split('@')[0] ?? 
+                       'User';
+        final userEmail = userProfile?['email'];
+        final userPhotoUrl = userProfile?['photo_url'];
+        final memberSince = userProfile?['created_at'] != null 
+            ? DateTime.parse(userProfile!['created_at'])
+            : null;
+
         return Padding(
           padding: const EdgeInsets.only(bottom: 12),
           child: AvailableItemTile(
-            item,
-            '${(index * 0.5 + 1).toFixed(1)} km away',
+            title,
+            location,
             _favoritesService,
+            imageUrl: imageUrl,
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => ItemDetailScreen(
+                    itemTitle: title,
+                    itemDescription: description,
+                    location: location,
+                    postId: postId,
+                    userId: userId,
+                    userName: userName,
+                    userEmail: userEmail,
+                    userPhotoUrl: userPhotoUrl,
+                    memberSince: memberSince,
+                    imageUrls: imageUrls,
+                    latitude: latitude,
+                    longitude: longitude,
+                  ),
+                ),
+              );
+            },
           ),
         );
       },
     );
   }
-}
-
-extension on double {
-  String toFixed(int decimals) => toStringAsFixed(decimals);
 }

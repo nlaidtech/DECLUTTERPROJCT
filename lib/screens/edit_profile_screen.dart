@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:file_picker/file_picker.dart';
 import '../services/auth_service.dart';
+import '../services/storage_service.dart';
 import '../main.dart';
 
 /// Edit Profile Screen
@@ -23,6 +25,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   bool _isLoading = true;
   bool _isSaving = false;
   User? _currentUser;
+  String? _profilePhotoUrl;
+  DateTime? _birthday;
 
   @override
   void initState() {
@@ -53,6 +57,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           _nameController.text = profile['display_name'] ?? _currentUser?.userMetadata?['name'] ?? '';
           _bioController.text = profile['bio'] ?? '';
           _locationController.text = profile['location'] ?? 'PANABO';
+          _profilePhotoUrl = profile['photo_url'];
+          if (profile['birthday'] != null) {
+            _birthday = DateTime.parse(profile['birthday']);
+          }
           _isLoading = false;
         });
       } else if (mounted) {
@@ -82,6 +90,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         'display_name': _nameController.text.trim(),
         'bio': _bioController.text.trim(),
         'location': _locationController.text.trim(),
+        'photo_url': _profilePhotoUrl,
+        'birthday': _birthday?.toIso8601String(),
         'updated_at': DateTime.now().toIso8601String(),
       };
 
@@ -106,6 +116,44 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(message)),
     );
+  }
+
+  Future<void> _uploadProfilePhoto() async {
+    try {
+      // Pick image file
+      FilePickerResult? result = await FilePicker.platform.pickFiles(
+        type: FileType.image,
+        allowMultiple: false,
+        withData: true,
+      );
+
+      if (result != null && result.files.isNotEmpty) {
+        // Show loading
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Uploading photo...')),
+          );
+        }
+
+        // Upload to storage
+        final storageService = StorageService();
+        final fileName = 'profile_${_currentUser!.id}_${DateTime.now().millisecondsSinceEpoch}';
+        final photoUrl = await storageService.uploadPostImage(result.files.first, fileName);
+
+        // Update state
+        setState(() {
+          _profilePhotoUrl = photoUrl;
+        });
+
+        if (mounted) {
+          _showSnackBar('Photo uploaded successfully!');
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        _showSnackBar('Error uploading photo: ${e.toString()}');
+      }
+    }
   }
 
   @override
@@ -180,16 +228,21 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                         CircleAvatar(
                           radius: 50,
                           backgroundColor: theme.primaryColor.withOpacity(0.2),
-                          child: Text(
-                            _nameController.text.isNotEmpty
-                                ? _nameController.text[0].toUpperCase()
-                                : 'U',
-                            style: TextStyle(
-                              fontSize: 40,
-                              fontWeight: FontWeight.bold,
-                              color: theme.primaryColor,
-                            ),
-                          ),
+                          backgroundImage: _profilePhotoUrl != null 
+                              ? NetworkImage(_profilePhotoUrl!)
+                              : null,
+                          child: _profilePhotoUrl == null
+                              ? Text(
+                                  _nameController.text.isNotEmpty
+                                      ? _nameController.text[0].toUpperCase()
+                                      : 'U',
+                                  style: TextStyle(
+                                    fontSize: 40,
+                                    fontWeight: FontWeight.bold,
+                                    color: theme.primaryColor,
+                                  ),
+                                )
+                              : null,
                         ),
                         Positioned(
                           bottom: 0,
@@ -203,9 +256,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                             child: IconButton(
                               icon: const Icon(Icons.camera_alt, size: 20),
                               color: Colors.white,
-                              onPressed: () {
-                                _showSnackBar('Photo upload coming soon!');
-                              },
+                              onPressed: _uploadProfilePhoto,
                             ),
                           ),
                         ),
@@ -257,6 +308,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                         return null;
                       },
                     ),
+                    _buildDivider(),
+                    _buildBirthdayField(),
                     _buildDivider(),
                     _buildTextField(
                       controller: _bioController,
@@ -336,5 +389,95 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Divider(height: 1, color: Colors.grey[200]),
     );
+  }
+
+  Widget _buildBirthdayField() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: InkWell(
+        onTap: () async {
+          final now = DateTime.now();
+          final picked = await showDatePicker(
+            context: context,
+            initialDate: _birthday ?? DateTime(now.year - 25),
+            firstDate: DateTime(1900),
+            lastDate: now,
+            helpText: 'Select your birthday',
+          );
+          if (picked != null) {
+            setState(() {
+              _birthday = picked;
+            });
+          }
+        },
+        child: InputDecorator(
+          decoration: InputDecoration(
+            labelText: 'Birthday',
+            prefixIcon: const Icon(Icons.cake_outlined),
+            suffixIcon: _birthday != null
+                ? IconButton(
+                    icon: const Icon(Icons.clear, size: 20),
+                    onPressed: () {
+                      setState(() {
+                        _birthday = null;
+                      });
+                    },
+                  )
+                : null,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: Colors.grey[300]!),
+            ),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                _birthday != null
+                    ? _formatDate(_birthday!)
+                    : 'Select your birthday',
+                style: TextStyle(
+                  fontSize: 16,
+                  color: _birthday != null ? Colors.black : Colors.grey[600],
+                ),
+              ),
+              if (_birthday != null)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).primaryColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    '${_calculateAge(_birthday!)} years old',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Theme.of(context).primaryColor,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _formatDate(DateTime date) {
+    final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return '${months[date.month - 1]} ${date.day}, ${date.year}';
+  }
+
+  int _calculateAge(DateTime birthday) {
+    final now = DateTime.now();
+    int age = now.year - birthday.year;
+    if (now.month < birthday.month || (now.month == birthday.month && now.day < birthday.day)) {
+      age--;
+    }
+    return age;
   }
 }

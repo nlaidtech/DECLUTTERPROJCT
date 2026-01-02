@@ -44,6 +44,8 @@ class DatabaseService {
     required String location,
     required String type, // 'giveaway' or 'available'
     List<String>? imageUrls,
+    double? latitude,
+    double? longitude,
   }) async {
     if (currentUserId == null) {
       throw Exception('User not logged in');
@@ -57,6 +59,8 @@ class DatabaseService {
       'location': location,
       'type': type,
       'image_urls': imageUrls ?? [],
+      'latitude': latitude,
+      'longitude': longitude,
       'status': 'active',
     }).select('id').single();
 
@@ -69,26 +73,44 @@ class DatabaseService {
     String? category,
     String? status,
   }) {
-    // Stream all posts and filter in the map
-    return supabase
+    // Build query with profile join
+    var query = supabase
         .from('posts')
         .stream(primaryKey: ['id'])
-        .order('created_at', ascending: false)
-        .map((posts) {
-          var filtered = posts;
-          
-          if (type != null) {
-            filtered = filtered.where((post) => post['type'] == type).toList();
+        .order('created_at', ascending: false);
+
+    return query.asyncMap((posts) async {
+      var filtered = posts;
+      
+      // Apply filters
+      if (type != null) {
+        filtered = filtered.where((post) => post['type'] == type).toList();
+      }
+      if (category != null) {
+        filtered = filtered.where((post) => post['category'] == category).toList();
+      }
+      if (status != null) {
+        filtered = filtered.where((post) => post['status'] == status).toList();
+      }
+      
+      // Fetch profiles for each post
+      final postsWithProfiles = await Future.wait(
+        filtered.map((post) async {
+          final userId = post['user_id'];
+          if (userId != null) {
+            final profile = await supabase
+                .from('profiles')
+                .select('id, email, display_name, photo_url, created_at')
+                .eq('id', userId)
+                .maybeSingle();
+            post['profiles'] = profile;
           }
-          if (category != null) {
-            filtered = filtered.where((post) => post['category'] == category).toList();
-          }
-          if (status != null) {
-            filtered = filtered.where((post) => post['status'] == status).toList();
-          }
-          
-          return filtered;
-        });
+          return post;
+        }),
+      );
+      
+      return postsWithProfiles;
+    });
   }
 
   /// Get all posts as a one-time query (with filters)
@@ -118,7 +140,40 @@ class DatabaseService {
         if (userId != null) {
           final profile = await supabase
               .from('profiles')
-              .select('id, email, display_name, avatar_url, created_at')
+              .select('id, email, display_name, photo_url, created_at')
+              .eq('id', userId)
+              .maybeSingle();
+          post['profiles'] = profile;
+        }
+        return post;
+      }).toList(),
+    );
+    
+    return List<Map<String, dynamic>>.from(postsWithProfiles);
+  }
+
+  /// Search posts by title or description
+  Future<List<Map<String, dynamic>>> searchPosts(String query) async {
+    if (query.trim().isEmpty) {
+      return [];
+    }
+
+    // Search in title and description, only active posts
+    final posts = await supabase
+        .from('posts')
+        .select()
+        .eq('status', 'active')
+        .or('title.ilike.%$query%,description.ilike.%$query%')
+        .order('created_at', ascending: false);
+    
+    // Fetch user profiles for each post
+    final postsWithProfiles = await Future.wait(
+      posts.map((post) async {
+        final userId = post['user_id'];
+        if (userId != null) {
+          final profile = await supabase
+              .from('profiles')
+              .select('id, email, display_name, photo_url, created_at')
               .eq('id', userId)
               .maybeSingle();
           post['profiles'] = profile;

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'advanced_chat_screen.dart';
 import '../services/message_service.dart';
-import 'package:timeago/timeago.dart' as timeago;
 
 /// Conversations List Screen
 /// 
@@ -16,6 +15,71 @@ class ConversationsScreen extends StatefulWidget {
 
 class _ConversationsScreenState extends State<ConversationsScreen> {
   final MessageService _messageService = MessageService();
+  final TextEditingController _searchController = TextEditingController();
+  bool _isSearching = false;
+  String _searchQuery = '';
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _showOptionsMenu(BuildContext context) {
+    final theme = Theme.of(context);
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (BuildContext context) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 12),
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 8),
+              ListTile(
+                leading: const Icon(Icons.mark_chat_read),
+                title: const Text('Mark all as read'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _markAllAsRead();
+                },
+              ),
+              ListTile(
+                leading: Icon(Icons.help_outline, color: theme.colorScheme.primary),
+                title: Text('Help', style: TextStyle(color: theme.colorScheme.primary)),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.pushNamed(context, '/help');
+                },
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _markAllAsRead() async {
+    // TODO: Implement mark all as read functionality
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('All messages marked as read'),
+        backgroundColor: Color(0xFF4CAF50),
+      ),
+    );
+  }
   
   @override
   Widget build(BuildContext context) {
@@ -24,23 +88,55 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
     return Scaffold(
       backgroundColor: theme.colorScheme.surface,
       appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () {
-            Navigator.pop(context);
-          },
-        ),
-        title: const Text('Messages'),
-        centerTitle: true,
+        leading: _isSearching
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: () {
+                  setState(() {
+                    _isSearching = false;
+                    _searchQuery = '';
+                    _searchController.clear();
+                  });
+                },
+              )
+            : IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: () {
+                  Navigator.pop(context);
+                },
+              ),
+        title: _isSearching
+            ? TextField(
+                controller: _searchController,
+                autofocus: true,
+                decoration: const InputDecoration(
+                  hintText: 'Search messages and names...',
+                  border: InputBorder.none,
+                  hintStyle: TextStyle(color: Colors.grey),
+                ),
+                style: const TextStyle(fontSize: 16),
+                onChanged: (value) {
+                  setState(() {
+                    _searchQuery = value.toLowerCase();
+                  });
+                },
+              )
+            : const Text('Messages'),
+        centerTitle: !_isSearching,
         elevation: 0,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.search),
-            onPressed: () {},
-          ),
+          if (!_isSearching)
+            IconButton(
+              icon: const Icon(Icons.search),
+              onPressed: () {
+                setState(() {
+                  _isSearching = true;
+                });
+              },
+            ),
           IconButton(
             icon: const Icon(Icons.more_vert),
-            onPressed: () {},
+            onPressed: () => _showOptionsMenu(context),
           ),
         ],
       ),
@@ -59,7 +155,16 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
 
           final conversations = snapshot.data!;
 
-          if (conversations.isEmpty) {
+          // Filter conversations based on search query
+          final filteredConversations = _searchQuery.isEmpty
+              ? conversations
+              : conversations.where((conv) {
+                  final name = (conv['other_user_name'] ?? '').toLowerCase();
+                  final lastMessage = (conv['last_message'] ?? '').toLowerCase();
+                  return name.contains(_searchQuery) || lastMessage.contains(_searchQuery);
+                }).toList();
+
+          if (filteredConversations.isEmpty) {
             return Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -71,7 +176,9 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    'No conversations yet',
+                    _searchQuery.isEmpty 
+                        ? 'No conversations yet'
+                        : 'No results found',
                     style: TextStyle(
                       fontSize: 16,
                       color: Colors.grey[600],
@@ -79,7 +186,9 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Start messaging people about their items!',
+                    _searchQuery.isEmpty 
+                        ? 'Start messaging people about their items!'
+                        : 'Try searching for a different name or message',
                     style: TextStyle(
                       fontSize: 14,
                       color: Colors.grey[500],
@@ -91,9 +200,9 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
           }
 
           return ListView.builder(
-            itemCount: conversations.length,
+            itemCount: filteredConversations.length,
             itemBuilder: (context, index) {
-              final conversation = conversations[index];
+              final conversation = filteredConversations[index];
               final lastMessageTime = conversation['last_message_time'] != null
                   ? DateTime.parse(conversation['last_message_time'])
                   : null;

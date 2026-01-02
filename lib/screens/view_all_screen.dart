@@ -187,11 +187,14 @@ class _ViewAllScreenState extends State<ViewAllScreen> {
       itemBuilder: (context, index) {
         final post = posts[index];
         final title = post['title'] ?? 'Untitled';
+        final description = post['description'] as String?;
         final location = post['location'] ?? 'Unknown';
         final postId = post['id'];
         final userId = post['user_id'];
         final imageUrls = List<String>.from(post['image_urls'] ?? []);
         final imageUrl = imageUrls.isNotEmpty ? imageUrls.first : null;
+        final latitude = (post['latitude'] as num?)?.toDouble();
+        final longitude = (post['longitude'] as num?)?.toDouble();
         
         // Get user profile data from the joined profiles table
         final userProfile = post['profiles'] as Map<String, dynamic>?;
@@ -199,6 +202,7 @@ class _ViewAllScreenState extends State<ViewAllScreen> {
                        userProfile?['email']?.split('@')[0] ?? 
                        'User';
         final userEmail = userProfile?['email'];
+        final userPhotoUrl = userProfile?['photo_url'];
         final memberSince = userProfile?['created_at'] != null 
             ? DateTime.parse(userProfile!['created_at'])
             : null;
@@ -213,12 +217,17 @@ class _ViewAllScreenState extends State<ViewAllScreen> {
               MaterialPageRoute(
                 builder: (_) => ItemDetailScreen(
                   itemTitle: title,
+                  itemDescription: description,
                   location: location,
                   postId: postId,
                   userId: userId,
                   userName: userName,
                   userEmail: userEmail,
+                  userPhotoUrl: userPhotoUrl,
                   memberSince: memberSince,
+                  imageUrls: imageUrls,
+                  latitude: latitude,
+                  longitude: longitude,
                 ),
               ),
             );
@@ -235,12 +244,15 @@ class _ViewAllScreenState extends State<ViewAllScreen> {
       itemBuilder: (context, index) {
         final post = posts[index];
         final title = post['title'] ?? 'Untitled';
+        final description = post['description'] as String?;
         final location = post['location'] ?? 'Unknown';
         final postId = post['id'];
         final userId = post['user_id'];
         final subtitle = location;
         final imageUrls = List<String>.from(post['image_urls'] ?? []);
         final imageUrl = imageUrls.isNotEmpty ? imageUrls.first : null;
+        final latitude = (post['latitude'] as num?)?.toDouble();
+        final longitude = (post['longitude'] as num?)?.toDouble();
         
         // Get user profile data from the joined profiles table
         final userProfile = post['profiles'] as Map<String, dynamic>?;
@@ -248,6 +260,7 @@ class _ViewAllScreenState extends State<ViewAllScreen> {
                        userProfile?['email']?.split('@')[0] ?? 
                        'User';
         final userEmail = userProfile?['email'];
+        final userPhotoUrl = userProfile?['photo_url'];
         final memberSince = userProfile?['created_at'] != null 
             ? DateTime.parse(userProfile!['created_at'])
             : null;
@@ -265,12 +278,17 @@ class _ViewAllScreenState extends State<ViewAllScreen> {
                 MaterialPageRoute(
                   builder: (_) => ItemDetailScreen(
                     itemTitle: title,
+                    itemDescription: description,
                     location: location,
                     postId: postId,
                     userId: userId,
                     userName: userName,
                     userEmail: userEmail,
+                    userPhotoUrl: userPhotoUrl,
                     memberSince: memberSince,
+                    imageUrls: imageUrls,
+                    latitude: latitude,
+                    longitude: longitude,
                   ),
                 ),
               );

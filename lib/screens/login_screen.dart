@@ -102,7 +102,7 @@ class _LoginScreenState extends State<LoginScreen> {
               const SizedBox(height: 12),
               // Subtitle describing login purpose
               Text(
-                'Enter your email and password to securely access\nyour account and manage your services.',
+                'welcome, give your unused items a new life by giving it to others.',
                 style: TextStyle(fontSize: 14, color: Colors.grey[600]),
               ),
               const SizedBox(height: 40),

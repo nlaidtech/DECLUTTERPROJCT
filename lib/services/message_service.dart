@@ -16,17 +16,23 @@ class MessageService {
       throw Exception('User not logged in');
     }
 
-    // Check if conversation already exists between these users
-    final existingConversation = await supabase
+    print('🔍 Looking for existing conversation between $currentUserId and $otherUserId');
+
+    // Check if conversation already exists between these two users
+    // Get all conversations where current user is a participant
+    final myConversations = await supabase
         .from('conversation_participants')
         .select('conversation_id')
-        .eq('user_id', currentUserId!)
-        .limit(1);
+        .eq('user_id', currentUserId!);
 
-    if (existingConversation.isNotEmpty) {
-      // Check if the other user is also in any of these conversations
-      for (var conv in existingConversation) {
+    print('📋 Current user is in ${myConversations.length} conversations');
+
+    // Check if the other user is also in any of these conversations
+    if (myConversations.isNotEmpty) {
+      for (var conv in myConversations) {
         final conversationId = conv['conversation_id'];
+        
+        // Check if other user is also a participant
         final otherParticipant = await supabase
             .from('conversation_participants')
             .select()
@@ -35,10 +41,13 @@ class MessageService {
             .maybeSingle();
 
         if (otherParticipant != null) {
+          print('✅ Found existing conversation: $conversationId');
           return conversationId;
         }
       }
     }
+
+    print('📝 Creating new conversation');
 
     // Create new conversation
     final conversation = await supabase
@@ -50,8 +59,10 @@ class MessageService {
         .single();
 
     final conversationId = conversation['id'];
+    print('✅ Created conversation: $conversationId');
 
-    // Add both participants
+    // Add both participants (CRITICAL: both users must be added!)
+    print('👥 Adding both participants to conversation');
     await supabase.from('conversation_participants').insert([
       {
         'conversation_id': conversationId,
@@ -63,6 +74,7 @@ class MessageService {
       },
     ]);
 
+    print('✅ Both participants added successfully');
     return conversationId;
   }
 

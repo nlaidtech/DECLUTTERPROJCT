@@ -1,5 +1,3 @@
-import 'package:timeago/timeago.dart' as timeago;
-
 /// Chat Message Model - Enhanced Version
 /// 
 /// Represents a single chat message with full metadata:

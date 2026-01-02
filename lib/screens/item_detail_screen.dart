@@ -3,6 +3,7 @@ import '../services/favorites_service.dart';
 import '../services/notification_service.dart';
 import '../main.dart';
 import 'advanced_chat_screen.dart';
+import 'user_profile_view_screen.dart';
 
 /// Item Detail Screen
 ///
@@ -20,8 +21,12 @@ class ItemDetailScreen extends StatefulWidget {
   final String? userId;
   final String? userName;
   final String? userEmail;
+  final String? userPhotoUrl;
   final DateTime? memberSince;
   final bool showActions; // Show Edit/Delete buttons only from My Posts
+  final List<String>? imageUrls;
+  final double? latitude;
+  final double? longitude;
 
   const ItemDetailScreen({
     super.key,
@@ -32,8 +37,12 @@ class ItemDetailScreen extends StatefulWidget {
     this.userId,
     this.userName,
     this.userEmail,
+    this.userPhotoUrl,
     this.memberSince,
     this.showActions = false, // Default to false (hide actions)
+    this.imageUrls,
+    this.latitude,
+    this.longitude,
   });
 
   @override
@@ -44,10 +53,150 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
   final FavoritesService _favoritesService = FavoritesService();
   int _currentImageIndex = 0;
   
-  // Sample images (in real app, these would be actual images)
-  final List<String> _images = ['1', '2', '3'];
+  List<String> get _images => widget.imageUrls ?? [];
   
   bool get isOwner => supabase.auth.currentUser?.id == widget.userId;
+
+  @override
+  void initState() {
+    super.initState();
+    print('ItemDetailScreen - Image URLs: ${widget.imageUrls}');
+    print('ItemDetailScreen - Number of images: ${_images.length}');
+    print('ItemDetailScreen - Description: ${widget.itemDescription}');
+  }
+
+  void _showLocationDialog(BuildContext context, ThemeData theme) {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: Container(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.location_on, color: theme.primaryColor, size: 28),
+                  const SizedBox(width: 12),
+                  const Expanded(
+                    child: Text(
+                      'Item Location',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.grey[100],
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.place, color: theme.primaryColor, size: 20),
+                        const SizedBox(width: 8),
+                        const Text(
+                          'Address',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      widget.location ?? 'Panabo City',
+                      style: const TextStyle(fontSize: 16),
+                    ),
+                    const Divider(height: 24),
+                    Row(
+                      children: [
+                        Icon(Icons.pin_drop, color: theme.primaryColor, size: 20),
+                        const SizedBox(width: 8),
+                        const Text(
+                          'Coordinates',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Lat: ${widget.latitude?.toStringAsFixed(4)}, Lng: ${widget.longitude?.toStringAsFixed(4)}',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey[700],
+                        fontFamily: 'monospace',
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        Navigator.pop(context);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Opening in Google Maps...'),
+                          ),
+                        );
+                        // In production, use url_launcher to open Google Maps
+                        // final url = 'https://www.google.com/maps/search/?api=1&query=${widget.latitude},${widget.longitude}';
+                      },
+                      icon: const Icon(Icons.map),
+                      label: const Text('Google Maps'),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.pop(context);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Getting directions...'),
+                          ),
+                        );
+                        // In production, use url_launcher for directions
+                      },
+                      icon: const Icon(Icons.directions),
+                      label: const Text('Directions'),
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -97,48 +246,75 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                     fit: StackFit.expand,
                     children: [
                       // Image Carousel
-                      PageView.builder(
-                        itemCount: _images.length,
-                        onPageChanged: (index) {
-                          setState(() {
-                            _currentImageIndex = index;
-                          });
-                        },
-                        itemBuilder: (context, index) {
-                          return Container(
-                            color: Colors.grey[200],
-                            child: Icon(
-                              Icons.image,
-                              size: 80,
-                              color: Colors.grey[400],
+                      _images.isEmpty
+                          ? Container(
+                              color: Colors.grey[200],
+                              child: Icon(
+                                Icons.image,
+                                size: 80,
+                                color: Colors.grey[400],
+                              ),
+                            )
+                          : PageView.builder(
+                              itemCount: _images.length,
+                              onPageChanged: (index) {
+                                setState(() {
+                                  _currentImageIndex = index;
+                                });
+                              },
+                              itemBuilder: (context, index) {
+                                return Image.network(
+                                  _images[index],
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) {
+                                    return Container(
+                                      color: Colors.grey[200],
+                                      child: Icon(
+                                        Icons.broken_image,
+                                        size: 80,
+                                        color: Colors.grey[400],
+                                      ),
+                                    );
+                                  },
+                                  loadingBuilder: (context, child, loadingProgress) {
+                                    if (loadingProgress == null) return child;
+                                    return Center(
+                                      child: CircularProgressIndicator(
+                                        value: loadingProgress.expectedTotalBytes != null
+                                            ? loadingProgress.cumulativeBytesLoaded /
+                                                loadingProgress.expectedTotalBytes!
+                                            : null,
+                                      ),
+                                    );
+                                  },
+                                );
+                              },
                             ),
-                          );
-                        },
-                      ),
                       
                       // Image indicator
-                      Positioned(
-                        bottom: 16,
-                        left: 0,
-                        right: 0,
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: List.generate(
-                            _images.length,
-                            (index) => Container(
-                              width: 8,
-                              height: 8,
-                              margin: const EdgeInsets.symmetric(horizontal: 4),
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: _currentImageIndex == index
-                                    ? Colors.white
-                                    : Colors.white.withOpacity(0.5),
+                      if (_images.length > 1)
+                        Positioned(
+                          bottom: 16,
+                          left: 0,
+                          right: 0,
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: List.generate(
+                              _images.length,
+                              (index) => Container(
+                                width: 8,
+                                height: 8,
+                                margin: const EdgeInsets.symmetric(horizontal: 4),
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: _currentImageIndex == index
+                                      ? Colors.white
+                                      : Colors.white.withOpacity(0.5),
+                                ),
                               ),
                             ),
                           ),
                         ),
-                      ),
                     ],
                   ),
                 ),
@@ -186,18 +362,42 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                       const SizedBox(height: 12),
                       
                       // Location
-                      Row(
-                        children: [
-                          Icon(Icons.location_on, size: 20, color: theme.primaryColor),
-                          const SizedBox(width: 4),
-                          Text(
-                            widget.location ?? 'Panabo City',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.grey[600],
-                            ),
+                      InkWell(
+                        onTap: () {
+                          if (widget.latitude != null && widget.longitude != null) {
+                            _showLocationDialog(context, theme);
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Location coordinates not available'),
+                              ),
+                            );
+                          }
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: theme.primaryColor.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8),
                           ),
-                        ],
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.location_on, size: 20, color: theme.primaryColor),
+                              const SizedBox(width: 6),
+                              Text(
+                                widget.location ?? 'Panabo City',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: theme.primaryColor,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              const SizedBox(width: 4),
+                              Icon(Icons.arrow_forward_ios, size: 12, color: theme.primaryColor),
+                            ],
+                          ),
+                        ),
                       ),
                       
                       const SizedBox(height: 24),
@@ -238,12 +438,16 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                       ),
                       const SizedBox(height: 12),
                       Text(
-                        widget.itemDescription ??
-                            'This is a great item in excellent condition. Perfect for someone who can use it! Feel free to contact me if you\'re interested.',
+                        widget.itemDescription?.isNotEmpty == true
+                            ? widget.itemDescription!
+                            : 'No description provided.',
                         style: TextStyle(
                           fontSize: 15,
                           color: Colors.grey[700],
                           height: 1.5,
+                          fontStyle: widget.itemDescription?.isNotEmpty == true 
+                              ? FontStyle.normal 
+                              : FontStyle.italic,
                         ),
                       ),
                       
@@ -270,14 +474,19 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                             CircleAvatar(
                               radius: 28,
                               backgroundColor: theme.primaryColor.withOpacity(0.2),
-                              child: Text(
-                                (widget.userName ?? widget.userEmail ?? 'U')[0].toUpperCase(),
-                                style: TextStyle(
-                                  fontSize: 24,
-                                  fontWeight: FontWeight.bold,
-                                  color: theme.primaryColor,
-                                ),
-                              ),
+                              backgroundImage: widget.userPhotoUrl != null 
+                                  ? NetworkImage(widget.userPhotoUrl!)
+                                  : null,
+                              child: widget.userPhotoUrl == null
+                                  ? Text(
+                                      (widget.userName ?? widget.userEmail ?? 'U')[0].toUpperCase(),
+                                      style: TextStyle(
+                                        fontSize: 24,
+                                        fontWeight: FontWeight.bold,
+                                        color: theme.primaryColor,
+                                      ),
+                                    )
+                                  : null,
                             ),
                             const SizedBox(width: 16),
                             Expanded(
@@ -291,16 +500,17 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                                       fontWeight: FontWeight.w600,
                                     ),
                                   ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    widget.memberSince != null
-                                        ? 'Member since ${widget.memberSince!.year}'
-                                        : 'New member',
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      color: Colors.grey[600],
+                                  if (widget.userEmail != null)
+                                    Padding(
+                                      padding: const EdgeInsets.only(top: 4),
+                                      child: Text(
+                                        widget.userEmail!,
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          color: Colors.grey[600],
+                                        ),
+                                      ),
                                     ),
-                                  ),
                                 ],
                               ),
                             ),
@@ -308,8 +518,17 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                               IconButton(
                                 icon: const Icon(Icons.chevron_right),
                                 onPressed: () {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(content: Text('User profile coming soon!')),
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => UserProfileViewScreen(
+                                        userId: widget.userId!,
+                                        userName: widget.userName,
+                                        userEmail: widget.userEmail,
+                                        userPhotoUrl: widget.userPhotoUrl,
+                                        memberSince: widget.memberSince,
+                                      ),
+                                    ),
                                   );
                                 },
                               ),

@@ -169,6 +169,8 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
           location: _locationController.text.trim(),
           type: postType,
           imageUrls: imageUrls,
+          latitude: _selectedLatLng?.latitude,
+          longitude: _selectedLatLng?.longitude,
         );
 
         print('Post created successfully with ID: $postId');

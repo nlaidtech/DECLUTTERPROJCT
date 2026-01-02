@@ -76,7 +76,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final userName = _userProfile?['display_name'] ?? _currentUser?.userMetadata?['name'] ?? _currentUser?.email?.split('@')[0] ?? 'User';
     final userEmail = _currentUser?.email ?? 'user@example.com';
     final userBio = _userProfile?['bio'] ?? '';
-    final userLocation = _userProfile?['location'] ?? 'PANABO';
+    final userPhotoUrl = _userProfile?['photo_url'];
 
     if (_isLoading) {
       return Scaffold(
@@ -110,16 +110,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
             fontSize: 20,
           ),
         ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.settings_outlined, color: Colors.black),
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Settings coming soon!')),
-              );
-            },
-          ),
-        ],
       ),
       body: SingleChildScrollView(
         child: Column(
@@ -137,14 +127,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   CircleAvatar(
                     radius: 50,
                     backgroundColor: theme.primaryColor.withOpacity(0.2),
-                    child: Text(
-                      userName.isNotEmpty ? userName[0].toUpperCase() : 'U',
-                      style: TextStyle(
-                        fontSize: 40,
-                        fontWeight: FontWeight.bold,
-                        color: theme.primaryColor,
-                      ),
-                    ),
+                    backgroundImage: userPhotoUrl != null 
+                        ? NetworkImage(userPhotoUrl)
+                        : null,
+                    child: userPhotoUrl == null
+                        ? Text(
+                            userName.isNotEmpty ? userName[0].toUpperCase() : 'U',
+                            style: TextStyle(
+                              fontSize: 40,
+                              fontWeight: FontWeight.bold,
+                              color: theme.primaryColor,
+                            ),
+                          )
+                        : null,
                   ),
                   const SizedBox(height: 16),
                   
@@ -166,25 +161,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       color: Colors.grey[600],
                     ),
                   ),
-                  
-                  // Location
-                  if (userLocation.isNotEmpty) ...[
-                    const SizedBox(height: 4),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.location_on, size: 14, color: Colors.grey[600]),
-                        const SizedBox(width: 4),
-                        Text(
-                          userLocation,
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: Colors.grey[600],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
                   
                   // Bio
                   if (userBio.isNotEmpty) ...[
@@ -232,34 +208,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
             
             const SizedBox(height: 16),
             
-            // Statistics Cards
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: _StatCard(
-                      icon: Icons.card_giftcard,
-                      title: 'Given Away',
-                      value: '12',
-                      color: theme.primaryColor,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _StatCard(
-                      icon: Icons.favorite,
-                      title: 'Favorites',
-                      value: '8',
-                      color: Colors.red,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            
-            const SizedBox(height: 16),
-            
             // Menu Options
             Container(
               margin: const EdgeInsets.symmetric(horizontal: 16),
@@ -293,17 +241,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     subtitle: 'Manage notification preferences',
                     onTap: () {
                       Navigator.pushNamed(context, '/notifications');
-                    },
-                  ),
-                  _buildDivider(),
-                  _MenuTile(
-                    icon: Icons.location_on_outlined,
-                    title: 'Location',
-                    subtitle: userLocation,
-                    onTap: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Location settings coming soon!')),
-                      );
                     },
                   ),
                 ],
@@ -382,61 +319,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Divider(height: 1, color: Colors.grey[200]),
-    );
-  }
-}
-
-/// Statistic Card Widget
-class _StatCard extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String value;
-  final Color color;
-
-  const _StatCard({
-    required this.icon,
-    required this.title,
-    required this.value,
-    required this.color,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          Icon(icon, color: color, size: 28),
-          const SizedBox(height: 8),
-          Text(
-            value,
-            style: const TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            title,
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.grey[600],
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
     );
   }
 }

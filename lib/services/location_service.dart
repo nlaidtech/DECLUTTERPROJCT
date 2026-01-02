@@ -71,7 +71,9 @@ class LocationService {
       }
       return null;
     } catch (e) {
-      throw Exception('Failed to get coordinates: $e');
+      // Return null instead of throwing to allow graceful handling
+      print('Geocoding error for "$address": $e');
+      return null;
     }
   }
 

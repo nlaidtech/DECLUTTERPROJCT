@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../main.dart';
+import 'item_detail_screen.dart';
 
 /// My Posts Screen
 ///
@@ -14,6 +15,7 @@ class MyPostsScreen extends StatefulWidget {
 class _MyPostsScreenState extends State<MyPostsScreen> {
   List<Map<String, dynamic>> _posts = [];
   bool _isLoading = true;
+  Map<String, dynamic>? _userProfile;
 
   @override
   void initState() {
@@ -27,6 +29,13 @@ class _MyPostsScreenState extends State<MyPostsScreen> {
     try {
       final currentUser = supabase.auth.currentUser;
       if (currentUser != null) {
+        // Load user profile
+        final profile = await supabase
+            .from('profiles')
+            .select('photo_url')
+            .eq('id', currentUser.id)
+            .maybeSingle();
+        
         final posts = await supabase
             .from('posts')
             .select()
@@ -35,6 +44,7 @@ class _MyPostsScreenState extends State<MyPostsScreen> {
 
         if (mounted) {
           setState(() {
+            _userProfile = profile;
             _posts = List<Map<String, dynamic>>.from(posts);
             _isLoading = false;
           });
@@ -52,6 +62,9 @@ class _MyPostsScreenState extends State<MyPostsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final currentUser = supabase.auth.currentUser;
+    final userName = currentUser?.userMetadata?['name'] ?? currentUser?.email?.split('@')[0] ?? 'User';
+    
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
@@ -72,19 +85,75 @@ class _MyPostsScreenState extends State<MyPostsScreen> {
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : _posts.isEmpty
-              ? _buildEmptyState()
-              : RefreshIndicator(
-                  onRefresh: _loadMyPosts,
-                  child: ListView.builder(
-                    padding: const EdgeInsets.all(16),
-                    itemCount: _posts.length,
-                    itemBuilder: (context, index) {
-                      final post = _posts[index];
-                      return _buildPostCard(post);
-                    },
+          : Column(
+              children: [
+                // User Profile Header
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    border: Border(
+                      bottom: BorderSide(color: Color(0xFFE0E0E0), width: 1),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 30,
+                        backgroundColor: const Color(0xFF4CAF50).withOpacity(0.2),
+                        child: Text(
+                          userName[0].toUpperCase(),
+                          style: const TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF4CAF50),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              userName,
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            Text(
+                              '${_posts.length} ${_posts.length == 1 ? 'post' : 'posts'}',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.grey[600],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
                 ),
+                // Posts List
+                Expanded(
+                  child: _posts.isEmpty
+                      ? _buildEmptyState()
+                      : RefreshIndicator(
+                          onRefresh: _loadMyPosts,
+                          child: ListView.builder(
+                            padding: const EdgeInsets.all(16),
+                            itemCount: _posts.length,
+                            itemBuilder: (context, index) {
+                              final post = _posts[index];
+                              return _buildPostCard(post);
+                            },
+                          ),
+                        ),
+                ),
+              ],
+            ),
     );
   }
 
@@ -124,13 +193,38 @@ class _MyPostsScreenState extends State<MyPostsScreen> {
     final theme = Theme.of(context);
     final imageUrls = post['image_urls'] as List?;
     final firstImage = imageUrls?.isNotEmpty == true ? imageUrls![0] : null;
+    final currentUser = supabase.auth.currentUser;
 
-    return Card(
-      margin: const EdgeInsets.only(bottom: 16),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
+    return GestureDetector(
+      onTap: () {
+        // Navigate to detail screen
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => ItemDetailScreen(
+              itemTitle: post['title'] ?? 'Untitled',
+              itemDescription: post['description'],
+              location: post['location'],
+              postId: post['id'],
+              userId: currentUser?.id,
+              userName: currentUser?.userMetadata?['name'] ?? currentUser?.email?.split('@')[0],
+              userEmail: currentUser?.email,
+              userPhotoUrl: _userProfile?['photo_url'],
+              memberSince: currentUser?.createdAt != null ? DateTime.tryParse(currentUser!.createdAt) : null,
+              imageUrls: imageUrls != null ? List<String>.from(imageUrls) : null,
+              latitude: (post['latitude'] as num?)?.toDouble(),
+              longitude: (post['longitude'] as num?)?.toDouble(),
+              showActions: true, // Show Edit/Delete buttons
+            ),
+          ),
+        );
+      },
+      child: Card(
+        margin: const EdgeInsets.only(bottom: 16),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
           // Image
           if (firstImage != null)
             ClipRRect(
@@ -260,6 +354,7 @@ class _MyPostsScreenState extends State<MyPostsScreen> {
           ),
         ],
       ),
+    ),
     );
   }
 

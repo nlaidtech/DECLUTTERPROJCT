@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
-import '../widgets/category_button.dart';
 import '../widgets/giveaway_card.dart';
-import '../widgets/available_item_tile.dart';
 import '../services/favorites_service.dart';
 import '../services/database_service.dart';
 import 'create_post_screen.dart';
@@ -28,12 +26,9 @@ class _HomeScreenState extends State<HomeScreen> {
         setState(() => _selectedIndex = 0);
         break;
       case 1:
-        Navigator.pushNamed(context, '/saved');
-        break;
-      case 3:
         Navigator.pushNamed(context, '/message');
         break;
-      case 4:
+      case 2:
         Navigator.pushNamed(context, '/profile');
         break;
     }
@@ -59,12 +54,7 @@ class _HomeScreenState extends State<HomeScreen> {
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 16),
-            child: Center(
-              child: Text(
-                'PANABO',
-                style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
-              ),
-            ),
+          
           ),
         ],
       ),
@@ -143,37 +133,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
             const SizedBox(height: 28),
 
-            // ---------- CATEGORIES ----------
-            const Text(
-              'Categories',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 12),
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: [
-                  CategoryButton(
-                    'Sports',
-                    Icons.directions_bike,
-                    Theme.of(context).primaryColor,
-                  ),
-                  const CategoryButton(
-                    'Electronics',
-                    Icons.electrical_services,
-                    Colors.purple,
-                  ),
-                  CategoryButton(
-                    'Tools',
-                    Icons.build,
-                    Theme.of(context).colorScheme.secondary,
-                  ),
-                  const CategoryButton('Furniture', Icons.chair, Colors.blue),
-                ],
-              ),
-            ),
 
-            const SizedBox(height: 28),
+          
 
             // ---------- GIVE AWAY SECTION ----------
             Container(
@@ -217,23 +178,82 @@ class _HomeScreenState extends State<HomeScreen> {
                     ],
                   ),
                   const SizedBox(height: 12),
-                  FutureBuilder<List<Map<String, dynamic>>>(
-                    future: _databaseService.getPostsOnce(
+                  StreamBuilder<List<Map<String, dynamic>>>(
+                    stream: _databaseService.getPosts(
                       type: 'giveaway',
                       status: 'active',
                     ),
                     builder: (context, snapshot) {
                       if (snapshot.hasError) {
                         print('Giveaway error: ${snapshot.error}');
-                        return Padding(
-                          padding: const EdgeInsets.all(20.0),
-                          child: Text(
-                            'Error: ${snapshot.error}',
-                            style: const TextStyle(
-                              color: Colors.red,
-                              fontSize: 12,
-                            ),
+                        // Fallback to FutureBuilder if realtime fails
+                        return FutureBuilder<List<Map<String, dynamic>>>(
+                          future: _databaseService.getPostsOnce(
+                            type: 'giveaway',
+                            status: 'active',
                           ),
+                          builder: (context, futureSnapshot) {
+                            if (futureSnapshot.connectionState == ConnectionState.waiting) {
+                              return const Center(child: CircularProgressIndicator());
+                            }
+                            final posts = futureSnapshot.data ?? [];
+                            if (posts.isEmpty) {
+                              return const Padding(
+                                padding: EdgeInsets.all(20.0),
+                                child: Text(
+                                  'No giveaway items yet. Be the first to post!',
+                                  style: TextStyle(color: Colors.grey),
+                                ),
+                              );
+                            }
+                            return SingleChildScrollView(
+                              scrollDirection: Axis.horizontal,
+                              child: Row(
+                                children: posts.take(5).map((data) {
+                                  final title = data['title'] ?? 'Untitled';
+                                  final description = data['description'] as String?;
+                                  final location = data['location'] ?? 'Unknown';
+                                  final postId = data['id'];
+                                  final userId = data['user_id'];
+                                  final imageUrls = List<String>.from(data['image_urls'] ?? []);
+                                  final imageUrl = imageUrls.isNotEmpty ? imageUrls.first : null;
+                                  final latitude = (data['latitude'] as num?)?.toDouble();
+                                  final longitude = (data['longitude'] as num?)?.toDouble();
+                                  final userProfile = data['profiles'] as Map<String, dynamic>?;
+                                  final userName = userProfile?['display_name'] ?? userProfile?['email']?.split('@')[0] ?? 'User';
+                                  final userEmail = userProfile?['email'];
+                                  final userPhotoUrl = userProfile?['photo_url'];
+                                  final memberSince = userProfile?['created_at'] != null ? DateTime.parse(userProfile!['created_at']) : null;
+                                  return GiveAwayCard(
+                                    title,
+                                    favoritesService,
+                                    imageUrl: imageUrl,
+                                    onTap: () {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (_) => ItemDetailScreen(
+                                            itemTitle: title,
+                                            itemDescription: description,
+                                            location: location,
+                                            postId: postId,
+                                            userId: userId,
+                                            userName: userName,
+                                            userEmail: userEmail,
+                                            userPhotoUrl: userPhotoUrl,
+                                            memberSince: memberSince,
+                                            imageUrls: imageUrls,
+                                            latitude: latitude,
+                                            longitude: longitude,
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                  );
+                                }).toList(),
+                              ),
+                            );
+                          },
                         );
                       }
 
@@ -258,6 +278,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         child: Row(
                           children: posts.take(5).map((data) {
                             final title = data['title'] ?? 'Untitled';
+                            final description = data['description'] as String?;
                             final location = data['location'] ?? 'Unknown';
                             final postId = data['id'];
                             final userId = data['user_id'];
@@ -267,6 +288,8 @@ class _HomeScreenState extends State<HomeScreen> {
                             final imageUrl = imageUrls.isNotEmpty
                                 ? imageUrls.first
                                 : null;
+                            final latitude = (data['latitude'] as num?)?.toDouble();
+                            final longitude = (data['longitude'] as num?)?.toDouble();
                             
                             // Get user profile data from the joined profiles table
                             final userProfile = data['profiles'] as Map<String, dynamic>?;
@@ -274,6 +297,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                            userProfile?['email']?.split('@')[0] ?? 
                                            'User';
                             final userEmail = userProfile?['email'];
+                            final userPhotoUrl = userProfile?['photo_url'];
                             final memberSince = userProfile?['created_at'] != null 
                                 ? DateTime.parse(userProfile!['created_at'])
                                 : null;
@@ -288,12 +312,17 @@ class _HomeScreenState extends State<HomeScreen> {
                                   MaterialPageRoute(
                                     builder: (_) => ItemDetailScreen(
                                       itemTitle: title,
+                                      itemDescription: description,
                                       location: location,
                                       postId: postId,
                                       userId: userId,
                                       userName: userName,
                                       userEmail: userEmail,
+                                      userPhotoUrl: userPhotoUrl,
                                       memberSince: memberSince,
+                                      imageUrls: imageUrls,
+                                      latitude: latitude,
+                                      longitude: longitude,
                                     ),
                                   ),
                                 );
@@ -306,127 +335,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ],
               ),
-            ),
-
-            const SizedBox(height: 28),
-
-            // ---------- AVAILABLE NOW ----------
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Available now',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Theme.of(context).colorScheme.secondary,
-                  ),
-                ),
-                TextButton(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const ViewAllScreen(
-                          categoryTitle: 'Available Now',
-                          categoryType: 'available',
-                        ),
-                      ),
-                    );
-                  },
-                  child: Text(
-                    'View all',
-                    style: TextStyle(color: Theme.of(context).primaryColor),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            FutureBuilder<List<Map<String, dynamic>>>(
-              future: _databaseService.getPostsOnce(
-                type: 'available',
-                status: 'active',
-              ),
-              builder: (context, snapshot) {
-                if (snapshot.hasError) {
-                  print('Available error: ${snapshot.error}');
-                  return Padding(
-                    padding: const EdgeInsets.all(20.0),
-                    child: Text(
-                      'Error: ${snapshot.error}',
-                      style: const TextStyle(color: Colors.red, fontSize: 12),
-                    ),
-                  );
-                }
-
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-
-                final posts = snapshot.data ?? [];
-
-                if (posts.isEmpty) {
-                  return const Padding(
-                    padding: EdgeInsets.all(20.0),
-                    child: Text(
-                      'No available items yet. Post something to share!',
-                      style: TextStyle(color: Colors.grey),
-                    ),
-                  );
-                }
-
-                return Column(
-                  children: posts.take(3).map((data) {
-                    final title = data['title'] ?? 'Untitled';
-                    final location = data['location'] ?? 'Unknown';
-                    final postId = data['id'];
-                    final userId = data['user_id'];
-                    final subtitle = location;
-                    final imageUrls = List<String>.from(
-                      data['image_urls'] ?? [],
-                    );
-                    final imageUrl = imageUrls.isNotEmpty
-                        ? imageUrls.first
-                        : null;
-                    
-                    // Get user profile data from the joined profiles table
-                    final userProfile = data['profiles'] as Map<String, dynamic>?;
-                    final userName = userProfile?['display_name'] ?? 
-                                   userProfile?['email']?.split('@')[0] ?? 
-                                   'User';
-                    final userEmail = userProfile?['email'];
-                    final memberSince = userProfile?['created_at'] != null 
-                        ? DateTime.parse(userProfile!['created_at'])
-                        : null;
-
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 12.0),
-                      child: AvailableItemTile(
-                        title,
-                        subtitle,
-                        favoritesService,
-                        imageUrl: imageUrl,
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => ItemDetailScreen(
-                                itemTitle: title,
-                                location: location,
-                                postId: postId,
-                                userId: userId,
-                                userName: userName,
-                                userEmail: userEmail,
-                                memberSince: memberSince,
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                    );
-                  }).toList(),
-                );
-              },
             ),
 
             const SizedBox(height: 120),
@@ -467,22 +375,16 @@ class _HomeScreenState extends State<HomeScreen> {
                 onTap: () => _onNavItemTapped(0),
               ),
               _NavIcon(
-                icon: Icons.favorite,
-                outlinedIcon: Icons.favorite_border,
+                icon: Icons.chat_bubble,
+                outlinedIcon: Icons.chat_bubble_outline,
                 isActive: _selectedIndex == 1,
                 onTap: () => _onNavItemTapped(1),
               ),
               _NavIcon(
-                icon: Icons.chat_bubble,
-                outlinedIcon: Icons.chat_bubble_outline,
-                isActive: _selectedIndex == 3,
-                onTap: () => _onNavItemTapped(3),
-              ),
-              _NavIcon(
                 icon: Icons.person,
                 outlinedIcon: Icons.person_outline,
-                isActive: _selectedIndex == 4,
-                onTap: () => _onNavItemTapped(4),
+                isActive: _selectedIndex == 2,
+                onTap: () => _onNavItemTapped(2),
               ),
             ],
           ),
