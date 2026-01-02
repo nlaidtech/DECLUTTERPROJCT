@@ -39,6 +39,17 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    // Refresh current user in case it wasn't available in initState
+    if (_currentUser == null) {
+      final user = supabase.auth.currentUser;
+      if (user != null) {
+        setState(() {
+          _currentUser = user;
+        });
+        // Reload profile with the newly available user
+        _loadUserProfile();
+      }
+    }
     // Check if this is first-time setup from registration
     final args = ModalRoute.of(context)?.settings.arguments;
     if (args is bool && args == true) {
@@ -55,7 +66,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   }
 
   Future<void> _loadUserProfile() async {
-    if (_currentUser == null) return;
+    if (_currentUser == null) {
+      setState(() => _isLoading = false);
+      return;
+    }
 
     setState(() => _isLoading = true);
 
@@ -138,6 +152,21 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
   Future<void> _uploadProfilePhoto() async {
     try {
+      // Check if user is logged in, try to refresh if not
+      if (_currentUser == null) {
+        _currentUser = supabase.auth.currentUser;
+        if (_currentUser != null) {
+          setState(() {}); // Update UI with new user
+        }
+      }
+      
+      if (_currentUser == null) {
+        if (mounted) {
+          _showSnackBar('Please wait, loading user data...');
+        }
+        return;
+      }
+
       // Pick image file
       FilePickerResult? result = await FilePicker.platform.pickFiles(
         type: FileType.image,
@@ -155,8 +184,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
         // Upload to storage
         final storageService = StorageService();
-        final fileName = 'profile_${_currentUser!.id}_${DateTime.now().millisecondsSinceEpoch}';
-        final photoUrl = await storageService.uploadPostImage(result.files.first, fileName);
+        final photoUrl = await storageService.uploadProfilePicture(result.files.first);
 
         // Update state
         setState(() {

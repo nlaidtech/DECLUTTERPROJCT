@@ -54,7 +54,7 @@ class _EditPostScreenState extends State<EditPostScreen> {
     super.initState();
     _titleController = TextEditingController(text: widget.title ?? '');
     _descriptionController = TextEditingController(text: widget.description ?? '');
-    _locationController = TextEditingController(text: widget.location ?? '');
+    _locationController = TextEditingController(text: widget.location ?? 'Tagum City');
     _existingImages = List<String>.from(widget.imageUrls ?? []);
     
     if (widget.latitude != null && widget.longitude != null) {

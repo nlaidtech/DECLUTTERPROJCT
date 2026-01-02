@@ -19,7 +19,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
   final _formKey = GlobalKey<FormState>();
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
-  final _locationController = TextEditingController();
+  final _locationController = TextEditingController(text: 'Tagum City');
 
   final List<PlatformFile> _selectedImages = [];
   LatLng? _selectedLatLng;
