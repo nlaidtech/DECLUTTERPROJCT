@@ -21,8 +21,6 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
   final _descriptionController = TextEditingController();
   final _locationController = TextEditingController();
 
-  String _selectedCategory = 'Give Away';
-  final List<String> _categories = ['Give Away', 'Available Now'];
   final List<PlatformFile> _selectedImages = [];
   LatLng? _selectedLatLng;
 
@@ -132,12 +130,10 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
           ),
         );
 
-        // Determine post type based on category
-        final postType = _selectedCategory == 'Give Away'
-            ? 'giveaway'
-            : 'available';
+        // Default post type is giveaway
+        const postType = 'giveaway';
 
-        print('Post type: $postType, Category: $_selectedCategory');
+        print('Post type: $postType');
         print('Title: ${_titleController.text.trim()}');
         print('Number of images: ${_selectedImages.length}');
 
@@ -165,7 +161,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
         final postId = await DatabaseService().createPost(
           title: _titleController.text.trim(),
           description: _descriptionController.text.trim(),
-          category: _selectedCategory,
+          category: 'Giveaway',
           location: _locationController.text.trim(),
           type: postType,
           imageUrls: imageUrls,
@@ -418,52 +414,6 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                 }
                 return null;
               },
-            ),
-
-            const SizedBox(height: 16),
-
-            // Category Selection
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.grey[200]!),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Category',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-                  ),
-                  const SizedBox(height: 12),
-                  Wrap(
-                    spacing: 8,
-                    children: _categories.map((category) {
-                      final isSelected = _selectedCategory == category;
-                      return ChoiceChip(
-                        label: Text(category),
-                        selected: isSelected,
-                        onSelected: (selected) {
-                          setState(() {
-                            _selectedCategory = category;
-                          });
-                        },
-                        selectedColor: const Color(0xFF4CAF50).withOpacity(0.2),
-                        labelStyle: TextStyle(
-                          color: isSelected
-                              ? const Color(0xFF4CAF50)
-                              : Colors.grey[700],
-                          fontWeight: isSelected
-                              ? FontWeight.w600
-                              : FontWeight.normal,
-                        ),
-                      );
-                    }).toList(),
-                  ),
-                ],
-              ),
             ),
 
             const SizedBox(height: 16),

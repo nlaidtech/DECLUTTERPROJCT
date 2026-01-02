@@ -210,10 +210,7 @@ class _ActivityHistoryScreenState extends State<ActivityHistoryScreen> {
 
   Widget _buildFilterChips() {
     final filters = [
-      {'label': 'All', 'value': null},
       {'label': 'Posts', 'value': 'created_post'},
-      {'label': 'Saved', 'value': 'saved_post'},
-      {'label': 'Messages', 'value': 'sent_message'},
     ];
 
     return SizedBox(

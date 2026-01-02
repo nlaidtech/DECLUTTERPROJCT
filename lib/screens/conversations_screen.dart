@@ -24,62 +24,6 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
     _searchController.dispose();
     super.dispose();
   }
-
-  void _showOptionsMenu(BuildContext context) {
-    final theme = Theme.of(context);
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (BuildContext context) {
-        return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const SizedBox(height: 12),
-              Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.grey[300],
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              const SizedBox(height: 8),
-              ListTile(
-                leading: const Icon(Icons.mark_chat_read),
-                title: const Text('Mark all as read'),
-                onTap: () {
-                  Navigator.pop(context);
-                  _markAllAsRead();
-                },
-              ),
-              ListTile(
-                leading: Icon(Icons.help_outline, color: theme.colorScheme.primary),
-                title: Text('Help', style: TextStyle(color: theme.colorScheme.primary)),
-                onTap: () {
-                  Navigator.pop(context);
-                  Navigator.pushNamed(context, '/help');
-                },
-              ),
-              const SizedBox(height: 8),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  void _markAllAsRead() async {
-    // TODO: Implement mark all as read functionality
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('All messages marked as read'),
-        backgroundColor: Color(0xFF4CAF50),
-      ),
-    );
-  }
   
   @override
   Widget build(BuildContext context) {
@@ -134,10 +78,6 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
                 });
               },
             ),
-          IconButton(
-            icon: const Icon(Icons.more_vert),
-            onPressed: () => _showOptionsMenu(context),
-          ),
         ],
       ),
       body: FutureBuilder<List<Map<String, dynamic>>>(
@@ -215,6 +155,7 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
                     : '',
                 unreadCount: conversation['unread_count'] ?? 0,
                 avatarInitial: (conversation['other_user_name'] ?? 'U')[0].toUpperCase(),
+                avatarUrl: conversation['other_user_avatar'],
                 onTap: () {
                   Navigator.push(
                     context,
@@ -265,6 +206,7 @@ class _ConversationTile extends StatelessWidget {
   final String timestamp;
   final int unreadCount;
   final String avatarInitial;
+  final String? avatarUrl;
   final VoidCallback onTap;
 
   const _ConversationTile({
@@ -273,6 +215,7 @@ class _ConversationTile extends StatelessWidget {
     required this.timestamp,
     required this.unreadCount,
     required this.avatarInitial,
+    this.avatarUrl,
     required this.onTap,
   });
 
@@ -299,14 +242,19 @@ class _ConversationTile extends StatelessWidget {
             CircleAvatar(
               radius: 28,
               backgroundColor: theme.colorScheme.primaryContainer,
-              child: Text(
-                avatarInitial,
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w600,
-                  color: theme.colorScheme.onPrimaryContainer,
-                ),
-              ),
+              backgroundImage: avatarUrl != null
+                  ? NetworkImage(avatarUrl!)
+                  : null,
+              child: avatarUrl == null
+                  ? Text(
+                      avatarInitial,
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w600,
+                        color: theme.colorScheme.onPrimaryContainer,
+                      ),
+                    )
+                  : null,
             ),
             const SizedBox(width: 16),
             

@@ -212,24 +212,12 @@ class AboutScreen extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Card(
-              child: Column(
-                children: [
-                  ListTile(
-                    leading: const Icon(Icons.facebook),
-                    title: const Text('Facebook'),
-                    subtitle: const Text('@DeclutterApp'),
-                    trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                    onTap: () => _launchURL('https://www.facebook.com'),
-                  ),
-                  const Divider(height: 1),
-                  ListTile(
-                    leading: const Icon(Icons.camera_alt),
-                    title: const Text('Instagram'),
-                    subtitle: const Text('@declutter.app'),
-                    trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                    onTap: () => _launchURL('https://www.instagram.com'),
-                  ),
-                ],
+              child: ListTile(
+                leading: const Icon(Icons.facebook),
+                title: const Text('Facebook'),
+                subtitle: const Text('Declutter App'),
+                trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                onTap: () => _launchURL('https://www.facebook.com/profile.php?id=61585974930171'),
               ),
             ),
           ),
@@ -245,11 +233,7 @@ class AboutScreen extends StatelessWidget {
                 title: const Text('Terms of Service'),
                 trailing: const Icon(Icons.arrow_forward_ios, size: 16),
                 onTap: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Terms of Service coming soon!'),
-                    ),
-                  );
+                  Navigator.pushNamed(context, '/terms-of-service');
                 },
               ),
             ),

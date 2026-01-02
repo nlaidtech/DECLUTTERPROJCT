@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../widgets/giveaway_card.dart';
 import '../services/favorites_service.dart';
 import '../services/database_service.dart';
+import '../services/message_service.dart';
 import 'create_post_screen.dart';
 import 'view_all_screen.dart';
 import 'item_detail_screen.dart';
@@ -17,6 +18,21 @@ class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
   final FavoritesService favoritesService = FavoritesService();
   final DatabaseService _databaseService = DatabaseService();
+  final MessageService _messageService = MessageService();
+  int _unreadMessageCount = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUnreadCount();
+  }
+
+  Future<void> _loadUnreadCount() async {
+    final count = await _messageService.getUnreadMessageCount();
+    if (mounted) {
+      setState(() => _unreadMessageCount = count);
+    }
+  }
 
   void _onNavItemTapped(int index) {
     if (index == _selectedIndex) return;
@@ -26,7 +42,10 @@ class _HomeScreenState extends State<HomeScreen> {
         setState(() => _selectedIndex = 0);
         break;
       case 1:
-        Navigator.pushNamed(context, '/message');
+        Navigator.pushNamed(context, '/message').then((_) {
+          // Reload unread count when returning from messages
+          _loadUnreadCount();
+        });
         break;
       case 2:
         Navigator.pushNamed(context, '/profile');
@@ -374,11 +393,41 @@ class _HomeScreenState extends State<HomeScreen> {
                 isActive: _selectedIndex == 0,
                 onTap: () => _onNavItemTapped(0),
               ),
-              _NavIcon(
-                icon: Icons.chat_bubble,
-                outlinedIcon: Icons.chat_bubble_outline,
-                isActive: _selectedIndex == 1,
-                onTap: () => _onNavItemTapped(1),
+              Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  _NavIcon(
+                    icon: Icons.chat_bubble,
+                    outlinedIcon: Icons.chat_bubble_outline,
+                    isActive: _selectedIndex == 1,
+                    onTap: () => _onNavItemTapped(1),
+                  ),
+                  if (_unreadMessageCount > 0)
+                    Positioned(
+                      top: 8,
+                      right: 8,
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color: Colors.red,
+                          shape: BoxShape.circle,
+                        ),
+                        constraints: const BoxConstraints(
+                          minWidth: 18,
+                          minHeight: 18,
+                        ),
+                        child: Text(
+                          _unreadMessageCount > 99 ? '99+' : '$_unreadMessageCount',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    ),
+                ],
               ),
               _NavIcon(
                 icon: Icons.person,

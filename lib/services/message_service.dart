@@ -124,20 +124,28 @@ class MessageService {
           List<ChatMessage> chatMessages = [];
           
           for (var message in messages) {
+            // Skip messages deleted for current user
+            final deletedFor = List<String>.from(message['deleted_for'] ?? []);
+            if (deletedFor.contains(currentUserId)) {
+              continue;
+            }
+            
             final isSentByMe = message['sender_id'] == currentUserId;
             
-            // Get sender's display name from profiles
+            // Get sender's display name and avatar from profiles
             String senderName = 'User';
+            String? senderAvatar;
             if (!isSentByMe) {
               final profile = await supabase
                   .from('profiles')
-                  .select('display_name, email')
+                  .select('display_name, email, photo_url')
                   .eq('id', message['sender_id'])
                   .maybeSingle();
               
               senderName = profile?['display_name'] ?? 
                            profile?['email']?.split('@')[0] ?? 
                            'User';
+              senderAvatar = profile?['photo_url'];
             } else {
               senderName = 'You';
             }
@@ -148,7 +156,7 @@ class MessageService {
               timestamp: DateTime.parse(message['created_at']),
               isSentByMe: isSentByMe,
               senderName: senderName,
-              senderAvatar: null,
+              senderAvatar: senderAvatar,
               status: MessageStatus.read,
               imageUrl: message['image_url'],
               type: message['message_type'] == 'image' 
@@ -198,7 +206,7 @@ class MessageService {
             // Get other user's profile
             final otherUserProfile = await supabase
                 .from('profiles')
-                .select('display_name, avatar_url')
+                .select('display_name, photo_url')
                 .eq('id', otherParticipant['user_id'])
                 .maybeSingle();
             
@@ -228,7 +236,7 @@ class MessageService {
               'id': conversationId,
               'other_user_id': otherParticipant['user_id'],
               'other_user_name': otherUserProfile?['display_name'] ?? 'User',
-              'other_user_avatar': otherUserProfile?['avatar_url'],
+              'other_user_avatar': otherUserProfile?['photo_url'],
               'last_message': lastMessage?['content'] ?? '',
               'last_message_time': lastMessage?['created_at'],
               'unread_count': unreadCount,
@@ -269,6 +277,45 @@ class MessageService {
     }
   }
 
+  /// Get unread message count for current user
+  Future<int> getUnreadMessageCount() async {
+    if (currentUserId == null) return 0;
+
+    try {
+      // Get all conversations where user is a participant
+      final myConversations = await supabase
+          .from('conversation_participants')
+          .select('conversation_id')
+          .eq('user_id', currentUserId!);
+
+      if (myConversations.isEmpty) return 0;
+
+      final conversationIds = myConversations
+          .map((c) => c['conversation_id'] as String)
+          .toList();
+
+      // Count unread messages (messages not sent by me and not in my read_by list)
+      final messages = await supabase
+          .from('messages')
+          .select('read_by')
+          .inFilter('conversation_id', conversationIds)
+          .neq('sender_id', currentUserId!);
+
+      int unreadCount = 0;
+      for (var message in messages) {
+        final readBy = List<String>.from(message['read_by'] ?? []);
+        if (!readBy.contains(currentUserId)) {
+          unreadCount++;
+        }
+      }
+
+      return unreadCount;
+    } catch (e) {
+      print('Error getting unread count: $e');
+      return 0;
+    }
+  }
+
   /// Get user profile by ID
   Future<Map<String, dynamic>?> getUserProfile(String userId) async {
     return await supabase
@@ -276,5 +323,60 @@ class MessageService {
         .select('display_name, avatar_url, email')
         .eq('id', userId)
         .maybeSingle();
+  }
+
+  /// Delete a message for me only (hides from my view)
+  Future<void> deleteMessageForMe(String messageId) async {
+    if (currentUserId == null) return;
+
+    try {
+      // Get current deleted_for list
+      final message = await supabase
+          .from('messages')
+          .select('deleted_for')
+          .eq('id', messageId)
+          .maybeSingle();
+
+      if (message != null) {
+        final deletedFor = List<String>.from(message['deleted_for'] ?? []);
+        if (!deletedFor.contains(currentUserId)) {
+          deletedFor.add(currentUserId!);
+          await supabase
+              .from('messages')
+              .update({'deleted_for': deletedFor})
+              .eq('id', messageId);
+        }
+      }
+    } catch (e) {
+      print('Error deleting message for me: $e');
+      throw 'Failed to delete message';
+    }
+  }
+
+  /// Delete a message for everyone (only sender can do this)
+  Future<void> deleteMessageForEveryone(String messageId) async {
+    if (currentUserId == null) return;
+
+    try {
+      // Verify the message belongs to current user
+      final message = await supabase
+          .from('messages')
+          .select('sender_id')
+          .eq('id', messageId)
+          .maybeSingle();
+
+      if (message != null && message['sender_id'] == currentUserId) {
+        // Delete the message completely
+        await supabase
+            .from('messages')
+            .delete()
+            .eq('id', messageId);
+      } else {
+        throw 'You can only delete your own messages for everyone';
+      }
+    } catch (e) {
+      print('Error deleting message for everyone: $e');
+      rethrow;
+    }
   }
 }

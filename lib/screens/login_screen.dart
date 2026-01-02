@@ -76,11 +76,11 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // AppBar with Declutter title and back button
+      // AppBar with Declutter title and no back button
       appBar: AppBar(
         backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
         elevation: 0,
-      
+        automaticallyImplyLeading: false, // Remove back arrow
         title: Text(
           'Declutter',
           style: Theme.of(context).appBarTheme.titleTextStyle,
@@ -191,29 +191,14 @@ class _LoginScreenState extends State<LoginScreen> {
                     child: Container(height: 1, color: Colors.grey[300]),
                   ),
                   const SizedBox(width: 16),
-                  Text(
-                    'Or Continue With Account',
-                    style: TextStyle(color: Colors.grey[600], fontSize: 12),
-                  ),
-                  const SizedBox(width: 16),
+               
                   Expanded(
                     child: Container(height: 1, color: Colors.grey[300]),
                   ),
                 ],
               ),
 
-              // Social login buttons
-              const SizedBox(height: 24),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  _buildSocialIcon(Icons.facebook),
-                  const SizedBox(width: 16),
-                  _buildSocialIcon(Icons.mail),
-                  const SizedBox(width: 16),
-                  _buildSocialIcon(Icons.apple),
-                ],
-              ),
+      
 
               // Sign up link
               const SizedBox(height: 32),
@@ -332,19 +317,6 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
         ),
       ],
-    );
-  }
-
-  // Helper method to build social login icon buttons
-  Widget _buildSocialIcon(IconData icon) {
-    return Container(
-      width: 50,
-      height: 50,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        border: Border.all(color: Colors.grey[300]!, width: 1),
-      ),
-      child: Icon(icon, color: Colors.grey[600], size: 24),
     );
   }
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/message_model.dart';
 import '../services/message_service.dart';
+import '../services/sound_service.dart';
 
 /// Advanced Chat Screen - Production-Ready Implementation
 /// 
@@ -37,10 +38,12 @@ class _AdvancedChatScreenState extends State<AdvancedChatScreen>
   final ScrollController _scrollController = ScrollController();
   final FocusNode _focusNode = FocusNode();
   final MessageService _messageService = MessageService();
+  final SoundService _soundService = SoundService();
 
   // State
   String? _conversationId;
   bool _isLoading = true;
+  int _lastMessageCount = 0;
 
   @override
   void initState() {
@@ -119,6 +122,48 @@ class _AdvancedChatScreenState extends State<AdvancedChatScreen>
     }
   }
 
+  /// Delete message for me only
+  Future<void> _deleteMessageForMe(String messageId) async {
+    try {
+      await _messageService.deleteMessageForMe(messageId);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Message deleted'),
+            backgroundColor: Color(0xFF4CAF50),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
+
+  /// Delete message for everyone
+  Future<void> _deleteMessageForEveryone(String messageId) async {
+    try {
+      await _messageService.deleteMessageForEveryone(messageId);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Message deleted for everyone'),
+            backgroundColor: Color(0xFF4CAF50),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
+
   /// Smooth scroll to bottom of chat
   void _scrollToBottom() {
     Future.delayed(const Duration(milliseconds: 300), () {
@@ -185,6 +230,15 @@ class _AdvancedChatScreenState extends State<AdvancedChatScreen>
 
                       final messages = snapshot.data!;
 
+                      // Play sound when new message from other person arrives
+                      if (messages.length > _lastMessageCount && messages.isNotEmpty) {
+                        final lastMessage = messages.last;
+                        if (!lastMessage.isSentByMe) {
+                          _soundService.playMessageSound();
+                        }
+                        _lastMessageCount = messages.length;
+                      }
+
                       if (messages.isEmpty) {
                         return Center(
                           child: Text(
@@ -214,6 +268,8 @@ class _AdvancedChatScreenState extends State<AdvancedChatScreen>
                               // Message bubble
                               _MessageBubble(
                                 message: message,
+                                onDeleteForMe: () => _deleteMessageForMe(message.id),
+                                onDeleteForEveryone: () => _deleteMessageForEveryone(message.id),
                               ),
                             ],
                           );
@@ -264,12 +320,6 @@ class _AdvancedChatScreenState extends State<AdvancedChatScreen>
           ),
         ],
       ),
-      actions: [
-        IconButton(
-          icon: const Icon(Icons.more_vert),
-          onPressed: () {},
-        ),
-      ],
     );
   }
 
@@ -382,10 +432,67 @@ class _DateSeparator extends StatelessWidget {
 /// Message bubble widget with status indicators
 class _MessageBubble extends StatelessWidget {
   final ChatMessage message;
+  final VoidCallback? onDeleteForMe;
+  final VoidCallback? onDeleteForEveryone;
 
   const _MessageBubble({
     required this.message,
+    this.onDeleteForMe,
+    this.onDeleteForEveryone,
   });
+
+  void _showDeleteOptions(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (BuildContext context) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 12),
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 16),
+              ListTile(
+                leading: const Icon(Icons.delete_outline, color: Colors.red),
+                title: const Text('Delete for me'),
+                subtitle: const Text('This message will be deleted from your view'),
+                onTap: () {
+                  Navigator.pop(context);
+                  onDeleteForMe?.call();
+                },
+              ),
+              if (message.isSentByMe)
+                ListTile(
+                  leading: const Icon(Icons.delete_forever, color: Colors.red),
+                  title: const Text('Delete for everyone'),
+                  subtitle: const Text('This message will be deleted for all participants'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    onDeleteForEveryone?.call();
+                  },
+                ),
+              ListTile(
+                leading: Icon(Icons.cancel_outlined, color: Colors.grey[600]),
+                title: const Text('Cancel'),
+                onTap: () => Navigator.pop(context),
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -394,100 +501,108 @@ class _MessageBubble extends StatelessWidget {
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
-      child: Row(
-        mainAxisAlignment: isSent ? MainAxisAlignment.end : MainAxisAlignment.start,
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          // Avatar for received messages
-          if (!isSent) ...[
-            CircleAvatar(
-              radius: 16,
-              backgroundColor: theme.colorScheme.primary,
-              child: Text(
-                message.senderName[0].toUpperCase(),
-                style: TextStyle(
-                  fontSize: 12,
-                  color: theme.colorScheme.onPrimary,
-                ),
-              ),
-            ),
-            const SizedBox(width: 8),
-          ],
-          
-          // Message bubble
-          Flexible(
-            child: Container(
-              constraints: BoxConstraints(
-                maxWidth: MediaQuery.of(context).size.width * 0.7,
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              decoration: BoxDecoration(
-                color: isSent
-                    ? theme.colorScheme.primaryContainer
-                    : theme.colorScheme.surfaceContainerHighest,
-                borderRadius: BorderRadius.only(
-                  topLeft: const Radius.circular(20),
-                  topRight: const Radius.circular(20),
-                  bottomLeft: Radius.circular(isSent ? 20 : 4),
-                  bottomRight: Radius.circular(isSent ? 4 : 20),
-                ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Message text
-                  Text(
-                    message.text,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: isSent
-                          ? theme.colorScheme.onPrimaryContainer
-                          : theme.colorScheme.onSurface,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  
-                  // Time and status
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      // Display relative time (e.g., "2 hours ago", "14 hours ago")
-                      StreamBuilder<int>(
-                        stream: Stream.periodic(const Duration(seconds: 10), (count) => count),
-                        builder: (context, snapshot) {
-                          return Text(
-                            message.relativeTime,
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: isSent
-                                  ? theme.colorScheme.onPrimaryContainer.withValues(alpha: 0.7)
-                                  : theme.colorScheme.onSurfaceVariant,
-                              fontSize: 11,
-                            ),
-                          );
-                        },
-                      ),
-                      if (isSent) ...[
-                        const SizedBox(width: 4),
-                        Icon(
-                          message.status == MessageStatus.read
-                              ? Icons.done_all
-                              : message.status == MessageStatus.delivered
-                                  ? Icons.done_all
-                                  : Icons.done,
-                          size: 16,
-                          color: message.status == MessageStatus.read
-                              ? theme.colorScheme.primary
-                              : theme.colorScheme.onPrimaryContainer.withValues(alpha: 0.7),
+      child: GestureDetector(
+        onLongPress: () => _showDeleteOptions(context),
+        child: Row(
+          mainAxisAlignment: isSent ? MainAxisAlignment.end : MainAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            // Avatar for received messages
+            if (!isSent) ...[
+              CircleAvatar(
+                radius: 16,
+                backgroundColor: theme.colorScheme.primary,
+                backgroundImage: message.senderAvatar != null
+                    ? NetworkImage(message.senderAvatar!)
+                    : null,
+                child: message.senderAvatar == null
+                    ? Text(
+                        message.senderName[0].toUpperCase(),
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: theme.colorScheme.onPrimary,
                         ),
-                      ],
-                    ],
+                      )
+                    : null,
+              ),
+              const SizedBox(width: 8),
+            ],
+            
+            // Message bubble
+            Flexible(
+              child: Container(
+                constraints: BoxConstraints(
+                  maxWidth: MediaQuery.of(context).size.width * 0.7,
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                decoration: BoxDecoration(
+                  color: isSent
+                      ? theme.colorScheme.primaryContainer
+                      : theme.colorScheme.surfaceContainerHighest,
+                  borderRadius: BorderRadius.only(
+                    topLeft: const Radius.circular(20),
+                    topRight: const Radius.circular(20),
+                    bottomLeft: Radius.circular(isSent ? 20 : 4),
+                    bottomRight: Radius.circular(isSent ? 4 : 20),
                   ),
-                ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Message text
+                    Text(
+                      message.text,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: isSent
+                            ? theme.colorScheme.onPrimaryContainer
+                            : theme.colorScheme.onSurface,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    
+                    // Time and status
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // Display relative time (e.g., "2 hours ago", "14 hours ago")
+                        StreamBuilder<int>(
+                          stream: Stream.periodic(const Duration(seconds: 10), (count) => count),
+                          builder: (context, snapshot) {
+                            return Text(
+                              message.relativeTime,
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: isSent
+                                    ? theme.colorScheme.onPrimaryContainer.withValues(alpha: 0.7)
+                                    : theme.colorScheme.onSurfaceVariant,
+                                fontSize: 11,
+                              ),
+                            );
+                          },
+                        ),
+                        if (isSent) ...[
+                          const SizedBox(width: 4),
+                          Icon(
+                            message.status == MessageStatus.read
+                                ? Icons.done_all
+                                : message.status == MessageStatus.delivered
+                                    ? Icons.done_all
+                                    : Icons.done,
+                            size: 16,
+                            color: message.status == MessageStatus.read
+                                ? theme.colorScheme.primary
+                                : theme.colorScheme.onPrimaryContainer.withValues(alpha: 0.7),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
-          
-          if (isSent) const SizedBox(width: 8),
-        ],
+            
+            if (isSent) const SizedBox(width: 8),
+          ],
+        ),
       ),
     );
   }

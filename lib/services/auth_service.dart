@@ -60,6 +60,30 @@ class AuthService {
     await supabase.auth.signOut();
   }
 
+  /// Delete account and all associated data
+  Future<void> deleteAccount() async {
+    final userId = currentUser?.id;
+    if (userId == null) {
+      throw 'No user logged in';
+    }
+
+    try {
+      // Delete user profile and related data (CASCADE will handle posts, messages, etc.)
+      await supabase.from('profiles').delete().eq('id', userId);
+      
+      // Delete the auth user (requires admin privileges or RPC function)
+      // Note: This requires a database function to be set up in Supabase
+      await supabase.rpc('delete_user');
+      
+      // Sign out
+      await signOut();
+    } on PostgrestException catch (e) {
+      throw 'Error deleting account: ${e.message}';
+    } catch (e) {
+      throw 'Failed to delete account: ${e.toString()}';
+    }
+  }
+
   /// Send password reset email
   Future<void> resetPassword(String email) async {
     try {

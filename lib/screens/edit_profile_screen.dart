@@ -27,12 +27,23 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   User? _currentUser;
   String? _profilePhotoUrl;
   DateTime? _birthday;
+  bool _isFirstTimeSetup = false;
 
   @override
   void initState() {
     super.initState();
     _currentUser = supabase.auth.currentUser;
     _loadUserProfile();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Check if this is first-time setup from registration
+    final args = ModalRoute.of(context)?.settings.arguments;
+    if (args is bool && args == true) {
+      _isFirstTimeSetup = true;
+    }
   }
 
   @override
@@ -99,7 +110,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
       if (mounted) {
         _showSnackBar('Profile updated successfully!');
-        Navigator.pop(context, true); // Return true to indicate profile was updated
+        
+        if (_isFirstTimeSetup) {
+          // First-time setup, navigate to home
+          Navigator.pushReplacementNamed(context, '/home');
+        } else {
+          // Regular edit, go back
+          Navigator.pop(context, true); // Return true to indicate profile was updated
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -176,19 +194,35 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.close, color: Colors.black),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: const Text(
-          'Edit Profile',
-          style: TextStyle(
+        leading: _isFirstTimeSetup 
+            ? null  // No back button for first-time setup
+            : IconButton(
+                icon: const Icon(Icons.close, color: Colors.black),
+                onPressed: () => Navigator.pop(context),
+              ),
+        title: Text(
+          _isFirstTimeSetup ? 'Complete Your Profile' : 'Edit Profile',
+          style: const TextStyle(
             color: Colors.black,
             fontWeight: FontWeight.bold,
             fontSize: 20,
           ),
         ),
         actions: [
+          if (_isFirstTimeSetup)
+            TextButton(
+              onPressed: () {
+                // Skip profile setup and go to home
+                Navigator.pushReplacementNamed(context, '/home');
+              },
+              child: Text(
+                'Skip',
+                style: TextStyle(
+                  color: Colors.grey[600],
+                  fontSize: 16,
+                ),
+              ),
+            ),
           TextButton(
             onPressed: _isSaving ? null : _saveProfile,
             child: _isSaving
@@ -198,7 +232,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
                 : Text(
-                    'Save',
+                    _isFirstTimeSetup ? 'Done' : 'Save',
                     style: TextStyle(
                       color: theme.primaryColor,
                       fontSize: 16,

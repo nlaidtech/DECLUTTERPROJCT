@@ -18,6 +18,8 @@ import 'screens/activity_history_screen.dart';
 import 'screens/help_support_screen.dart';
 import 'screens/privacy_policy_screen.dart';
 import 'screens/about_screen.dart';
+import 'screens/settings_screen.dart';
+import 'screens/terms_of_service_screen.dart';
 import 'services/favorites_service.dart';
 
 void main() async {
@@ -83,12 +85,15 @@ class _MyAppState extends State<MyApp> {
         '/profile': (context) => const ProfileScreen(),
         '/search': (context) => const SearchScreen(),
         '/edit-profile': (context) => const EditProfileScreen(),
+        '/edit_profile': (context) => const EditProfileScreen(),
+        '/settings': (context) => const SettingsScreen(),
         '/my-posts': (context) => const MyPostsScreen(),
         '/notifications': (context) => const NotificationsScreen(),
         '/activity-history': (context) => const ActivityHistoryScreen(),
         '/help-support': (context) => const HelpSupportScreen(),
         '/privacy-policy': (context) => const PrivacyPolicyScreen(),
         '/about': (context) => const AboutScreen(),
+        '/terms-of-service': (context) => const TermsOfServiceScreen(),
       },
     );
   }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../main.dart';
 import 'item_detail_screen.dart';
+import 'edit_post_screen.dart';
 
 /// My Posts Screen
 ///
@@ -196,9 +197,9 @@ class _MyPostsScreenState extends State<MyPostsScreen> {
     final currentUser = supabase.auth.currentUser;
 
     return GestureDetector(
-      onTap: () {
+      onTap: () async {
         // Navigate to detail screen
-        Navigator.push(
+        final result = await Navigator.push<bool>(
           context,
           MaterialPageRoute(
             builder: (_) => ItemDetailScreen(
@@ -215,9 +216,14 @@ class _MyPostsScreenState extends State<MyPostsScreen> {
               latitude: (post['latitude'] as num?)?.toDouble(),
               longitude: (post['longitude'] as num?)?.toDouble(),
               showActions: true, // Show Edit/Delete buttons
+              postType: post['type'], // Pass post type for editing
             ),
           ),
         );
+        // Refresh if post was edited or deleted
+        if (result == true) {
+          _loadMyPosts();
+        }
       },
       child: Card(
         margin: const EdgeInsets.only(bottom: 16),
@@ -321,11 +327,26 @@ class _MyPostsScreenState extends State<MyPostsScreen> {
                   children: [
                     Expanded(
                       child: OutlinedButton.icon(
-                        onPressed: () {
+                        onPressed: () async {
                           // Edit post
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Edit coming soon!')),
+                          final result = await Navigator.push<bool>(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => EditPostScreen(
+                                postId: post['id'],
+                                title: post['title'],
+                                description: post['description'],
+                                location: post['location'],
+                                category: post['type'],
+                                imageUrls: imageUrls != null ? List<String>.from(imageUrls) : null,
+                                latitude: (post['latitude'] as num?)?.toDouble(),
+                                longitude: (post['longitude'] as num?)?.toDouble(),
+                              ),
+                            ),
                           );
+                          if (result == true) {
+                            _loadMyPosts(); // Refresh after edit
+                          }
                         },
                         icon: const Icon(Icons.edit, size: 18),
                         label: const Text('Edit'),

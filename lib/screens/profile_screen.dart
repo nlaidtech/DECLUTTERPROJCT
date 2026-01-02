@@ -110,6 +110,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
             fontSize: 20,
           ),
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.settings_outlined, color: Colors.black),
+            onPressed: () {
+              Navigator.pushNamed(context, '/settings');
+            },
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         child: Column(
@@ -176,32 +184,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       overflow: TextOverflow.ellipsis,
                     ),
                   ],
-                  
-                  const SizedBox(height: 20),
-                  
-                  // Edit Profile Button
-                  OutlinedButton.icon(
-                    onPressed: () async {
-                      final updated = await Navigator.pushNamed(context, '/edit-profile');
-                      if (updated == true && mounted) {
-                        // Refresh the profile screen
-                        await _loadProfile();
-                      }
-                    },
-                    icon: const Icon(Icons.edit_outlined),
-                    label: const Text('Edit Profile'),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: theme.primaryColor,
-                      side: BorderSide(color: theme.primaryColor),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 24,
-                        vertical: 12,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                    ),
-                  ),
                 ],
               ),
             ),
@@ -241,44 +223,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     subtitle: 'Manage notification preferences',
                     onTap: () {
                       Navigator.pushNamed(context, '/notifications');
-                    },
-                  ),
-                ],
-              ),
-            ),
-            
-            const SizedBox(height: 16),
-            
-            // Additional Options
-            Container(
-              margin: const EdgeInsets.symmetric(horizontal: 16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Column(
-                children: [
-                  _MenuTile(
-                    icon: Icons.help_outline,
-                    title: 'Help & Support',
-                    onTap: () {
-                      Navigator.pushNamed(context, '/help-support');
-                    },
-                  ),
-                  _buildDivider(),
-                  _MenuTile(
-                    icon: Icons.privacy_tip_outlined,
-                    title: 'Privacy Policy',
-                    onTap: () {
-                      Navigator.pushNamed(context, '/privacy-policy');
-                    },
-                  ),
-                  _buildDivider(),
-                  _MenuTile(
-                    icon: Icons.info_outline,
-                    title: 'About',
-                    onTap: () {
-                      Navigator.pushNamed(context, '/about');
                     },
                   ),
                 ],

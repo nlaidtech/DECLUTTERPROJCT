@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import '../services/favorites_service.dart';
-import '../services/notification_service.dart';
 import '../main.dart';
 import 'advanced_chat_screen.dart';
 import 'user_profile_view_screen.dart';
+import 'edit_post_screen.dart';
 
 /// Item Detail Screen
 ///
@@ -27,6 +27,7 @@ class ItemDetailScreen extends StatefulWidget {
   final List<String>? imageUrls;
   final double? latitude;
   final double? longitude;
+  final String? postType; // 'giveaway' or 'available'
 
   const ItemDetailScreen({
     super.key,
@@ -43,6 +44,7 @@ class ItemDetailScreen extends StatefulWidget {
     this.imageUrls,
     this.latitude,
     this.longitude,
+    this.postType,
   });
 
   @override
@@ -562,86 +564,37 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                     ),
                   ],
                 ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: () {
-                          // Open chat with item poster
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => AdvancedChatScreen(
-                                chatId: 'chat_${widget.userId}',
-                                recipientName: widget.userName ?? 
-                                    widget.userEmail?.split('@')[0] ?? 
-                                    'User',
-                                recipientAvatar: null,
-                                postId: widget.postId, // Link conversation to this post
-                              ),
-                            ),
-                          );
-                        },
-                        icon: const Icon(Icons.message_outlined),
-                        label: const Text('Message'),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: theme.primaryColor,
-                          side: BorderSide(color: theme.primaryColor),
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      // Open chat with item poster
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => AdvancedChatScreen(
+                            chatId: 'chat_${widget.userId}',
+                            recipientName: widget.userName ?? 
+                                widget.userEmail?.split('@')[0] ?? 
+                                'User',
+                            recipientAvatar: null,
+                            postId: widget.postId, // Link conversation to this post
                           ),
                         ),
+                      );
+                    },
+                    icon: const Icon(Icons.message_outlined),
+                    label: const Text('Message'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: theme.primaryColor,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        onPressed: () async {
-                          // Send notification to item owner
-                          if (widget.userId != null && widget.postId != null) {
-                            try {
-                              await NotificationService().notifyItemRequested(
-                                itemOwnerId: widget.userId!,
-                                itemId: widget.postId!,
-                                itemTitle: widget.itemTitle,
-                                itemImage: null, // Could add image URL if available
-                              );
-                              
-                              if (mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text('Request sent! The giver will be notified.'),
-                                    backgroundColor: Color(0xFF4CAF50),
-                                  ),
-                                );
-                              }
-                            } catch (e) {
-                              if (mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text('Error sending request: $e'),
-                                    backgroundColor: Colors.red,
-                                  ),
-                                );
-                              }
-                            }
-                          }
-                        },
-                        icon: const Icon(Icons.check_circle_outline),
-                        label: const Text('Request'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: theme.primaryColor,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          elevation: 0,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
               ),
             ),
@@ -667,10 +620,25 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                   children: [
                     Expanded(
                       child: OutlinedButton.icon(
-                        onPressed: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Edit feature coming soon!')),
+                        onPressed: () async {
+                          final result = await Navigator.push<bool>(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => EditPostScreen(
+                                postId: widget.postId!,
+                                title: widget.itemTitle,
+                                description: widget.itemDescription,
+                                location: widget.location,
+                                category: widget.postType,
+                                imageUrls: widget.imageUrls,
+                                latitude: widget.latitude,
+                                longitude: widget.longitude,
+                              ),
+                            ),
                           );
+                          if (result == true && mounted) {
+                            Navigator.pop(context, true); // Go back and refresh
+                          }
                         },
                         icon: const Icon(Icons.edit_outlined),
                         label: const Text('Edit'),
@@ -699,12 +667,32 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                                   child: const Text('Cancel'),
                                 ),
                                 TextButton(
-                                  onPressed: () {
+                                  onPressed: () async {
                                     Navigator.pop(context);
-                                    Navigator.pop(context);
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(content: Text('Post deleted')),
-                                    );
+                                    try {
+                                      await supabase
+                                          .from('posts')
+                                          .delete()
+                                          .eq('id', widget.postId!);
+                                      if (mounted) {
+                                        Navigator.pop(context, true);
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          const SnackBar(
+                                            content: Text('Post deleted successfully'),
+                                            backgroundColor: Color(0xFF4CAF50),
+                                          ),
+                                        );
+                                      }
+                                    } catch (e) {
+                                      if (mounted) {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(
+                                            content: Text('Error deleting post: $e'),
+                                            backgroundColor: Colors.red,
+                                          ),
+                                        );
+                                      }
+                                    }
                                   },
                                   style: TextButton.styleFrom(foregroundColor: Colors.red),
                                   child: const Text('Delete'),

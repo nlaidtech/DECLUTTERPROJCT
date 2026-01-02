@@ -73,12 +73,12 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
       if (mounted) {
         setState(() => _isLoading = false);
-        _showSnackBar('Account created successfully!');
+        _showSnackBar('Account created successfully! Please complete your profile.');
         
-        // Navigate to home screen
+        // Navigate to edit profile screen to complete profile setup
         Future.delayed(const Duration(seconds: 1), () {
           if (mounted) {
-            Navigator.pushReplacementNamed(context, '/home');
+            Navigator.pushReplacementNamed(context, '/edit_profile', arguments: true);
           }
         });
       }

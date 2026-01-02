@@ -6,14 +6,33 @@ import 'package:url_launcher/url_launcher.dart';
 class HelpSupportScreen extends StatelessWidget {
   const HelpSupportScreen({super.key});
 
-  Future<void> _launchEmail() async {
+  Future<void> _launchEmail(BuildContext context) async {
     final Uri emailUri = Uri(
       scheme: 'mailto',
-      path: 'support@declutterapp.com',
-      query: 'subject=Help Request',
+      path: 'nemuellaid673@gmail.com',
+      query: 'subject=Declutter App - Help Request',
     );
-    if (await canLaunchUrl(emailUri)) {
-      await launchUrl(emailUri);
+    
+    try {
+      final launched = await launchUrl(
+        emailUri,
+        mode: LaunchMode.externalApplication,
+      );
+      if (!launched && context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Could not open email app. Please email nemuellaid673@gmail.com'),
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('No email app found. Please email nemuellaid673@gmail.com'),
+          ),
+        );
+      }
     }
   }
 
@@ -118,94 +137,12 @@ class HelpSupportScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 16),
                 Card(
-                  child: Column(
-                    children: [
-                      ListTile(
-                        leading: const Icon(Icons.email_outlined),
-                        title: const Text('Email Support'),
-                        subtitle: const Text('support@declutterapp.com'),
-                        trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                        onTap: _launchEmail,
-                      ),
-                      const Divider(height: 1),
-                      ListTile(
-                        leading: const Icon(Icons.chat_bubble_outline),
-                        title: const Text('Live Chat'),
-                        subtitle: const Text('Available Mon-Fri, 9AM-5PM'),
-                        trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                        onTap: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Live chat coming soon!'),
-                            ),
-                          );
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 24),
-
-          // Resources
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Resources',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Card(
-                  child: Column(
-                    children: [
-                      ListTile(
-                        leading: const Icon(Icons.book_outlined),
-                        title: const Text('User Guide'),
-                        trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                        onTap: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('User guide coming soon!'),
-                            ),
-                          );
-                        },
-                      ),
-                      const Divider(height: 1),
-                      ListTile(
-                        leading: const Icon(Icons.video_library_outlined),
-                        title: const Text('Video Tutorials'),
-                        trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                        onTap: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Video tutorials coming soon!'),
-                            ),
-                          );
-                        },
-                      ),
-                      const Divider(height: 1),
-                      ListTile(
-                        leading: const Icon(Icons.forum_outlined),
-                        title: const Text('Community Forum'),
-                        trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                        onTap: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Community forum coming soon!'),
-                            ),
-                          );
-                        },
-                      ),
-                    ],
+                  child: ListTile(
+                    leading: const Icon(Icons.email_outlined),
+                    title: const Text('Email Support'),
+                    subtitle: const Text('nemuellaid673@gmail.com'),
+                    trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                    onTap: () => _launchEmail(context),
                   ),
                 ),
               ],

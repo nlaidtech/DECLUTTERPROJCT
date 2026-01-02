@@ -151,7 +151,7 @@ Your continued use of the service after changes constitutes acceptance of the up
             title: '11. Contact Us',
             content: '''If you have questions about this privacy policy or our data practices, please contact us at:
 
-Email: privacy@declutterapp.com
+Email: nemuellaid673@gmail.com
 Address: Panabo City, Philippines''',
           ),
 
