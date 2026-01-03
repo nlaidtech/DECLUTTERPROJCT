@@ -37,6 +37,21 @@ class DatabaseService {
   // ==================== POSTS (Items) ====================
 
   /// Create a new post (giveaway/available item)
+  /// 
+  /// This function:
+  /// 1. Validates the user is logged in
+  /// 2. Ensures the user exists in the users table (creates if missing)
+  /// 3. Inserts the post into the database
+  /// 4. Returns the post ID
+  /// 
+  /// Parameters:
+  /// - title: The title of the post
+  /// - description: Detailed description of the item
+  /// - category: Category of the item (e.g., "Giveaway")
+  /// - location: Location where the item is available
+  /// - type: Either 'giveaway' or 'available'
+  /// - imageUrls: List of image URLs uploaded to storage
+  /// - latitude/longitude: GPS coordinates of the item location
   Future<String> createPost({
     required String title,
     required String description,
@@ -47,24 +62,27 @@ class DatabaseService {
     double? latitude,
     double? longitude,
   }) async {
-    // Refresh session to ensure user is authenticated
+    // Step 1: Refresh the authentication session to ensure user is still logged in
     await supabase.auth.refreshSession();
     
+    // Step 2: Check if user is authenticated
     if (currentUserId == null) {
       print('ERROR: User not logged in when creating post');
       print('Current session: ${supabase.auth.currentSession}');
       throw Exception('User not logged in');
     }
 
-    // Ensure user exists in users table before creating post
+    // Step 3: Verify user exists in users table (required for foreign key constraint)
+    // The posts table has a foreign key to users.id, so user must exist first
     final userExists = await supabase
         .from('users')
         .select('id')
         .eq('id', currentUserId!)
         .maybeSingle();
     
+    // Step 4: If user doesn't exist in users table, create them
+    // This can happen if the user was created in auth but not in users table
     if (userExists == null) {
-      // Create user if it doesn't exist
       final user = supabase.auth.currentUser;
       await saveUserProfile(
         userId: currentUserId!,
@@ -74,19 +92,22 @@ class DatabaseService {
       print('Created missing user record for: $currentUserId');
     }
 
+    // Step 5: Insert the post into the database
+    // The .select('id').single() returns the inserted post's ID
     final response = await supabase.from('posts').insert({
-      'user_id': currentUserId,
+      'user_id': currentUserId,  // Links post to the user who created it
       'title': title,
       'description': description,
       'category': category,
       'location': location,
-      'type': type,
-      'image_urls': imageUrls ?? [],
-      'latitude': latitude,
+      'type': type,  // 'giveaway' or 'available'
+      'image_urls': imageUrls ?? [],  // Array of image URLs from Firebase Storage
+      'latitude': latitude,  // GPS coordinates for map view
       'longitude': longitude,
-      'status': 'active',
+      'status': 'active',  // Can be: active, reserved, completed
     }).select('id').single();
 
+    // Step 6: Return the newly created post ID
     return response['id'] as String;
   }
 

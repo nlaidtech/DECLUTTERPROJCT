@@ -8,18 +8,33 @@ class MessageService {
   String? get currentUserId => supabase.auth.currentUser?.id;
 
   /// Get or create a conversation between two users
+  /// 
+  /// This function implements a smart conversation lookup:
+  /// 1. First checks if a conversation already exists between the two users
+  /// 2. If found, returns the existing conversation ID
+  /// 3. If not found, creates a new conversation and adds both users as participants
+  /// 
+  /// Why this matters: Prevents duplicate conversations between same users
+  /// 
+  /// Parameters:
+  /// - otherUserId: The ID of the user you want to chat with
+  /// - postId: (Optional) If the conversation is about a specific post
+  /// 
+  /// Returns: The conversation ID (either existing or newly created)
   Future<String> getOrCreateConversation({
     required String otherUserId,
     String? postId,
   }) async {
+    // Validate user is logged in
     if (currentUserId == null) {
       throw Exception('User not logged in');
     }
 
     print('🔍 Looking for existing conversation between $currentUserId and $otherUserId');
 
-    // Check if conversation already exists between these two users
-    // Get all conversations where current user is a participant
+    // STEP 1: Find all conversations where current user is a participant
+    // Query the conversation_participants table to get all conversation IDs
+    // where the current user is involved
     final myConversations = await supabase
         .from('conversation_participants')
         .select('conversation_id')
@@ -27,12 +42,14 @@ class MessageService {
 
     print('📋 Current user is in ${myConversations.length} conversations');
 
-    // Check if the other user is also in any of these conversations
+    // STEP 2: Check if the other user is also in any of these conversations
+    // Loop through each conversation the current user is in
     if (myConversations.isNotEmpty) {
       for (var conv in myConversations) {
         final conversationId = conv['conversation_id'];
         
-        // Check if other user is also a participant
+        // Check if the other user is ALSO a participant in this conversation
+        // If yes, it means a conversation already exists between these two users
         final otherParticipant = await supabase
             .from('conversation_participants')
             .select()
@@ -40,20 +57,22 @@ class MessageService {
             .eq('user_id', otherUserId)
             .maybeSingle();
 
+        // Found a conversation where both users are participants!
         if (otherParticipant != null) {
           print('✅ Found existing conversation: $conversationId');
-          return conversationId;
+          return conversationId;  // Return existing conversation ID
         }
       }
     }
 
+    // STEP 3: No existing conversation found, create a new one
     print('📝 Creating new conversation');
 
-    // Create new conversation
+    // Insert a new conversation record
     final conversation = await supabase
         .from('conversations')
         .insert({
-          'post_id': postId,
+          'post_id': postId,  // Link to post if conversation is about an item
         })
         .select('id')
         .single();
@@ -61,16 +80,18 @@ class MessageService {
     final conversationId = conversation['id'];
     print('✅ Created conversation: $conversationId');
 
-    // Add both participants (CRITICAL: both users must be added!)
+    // STEP 4: Add BOTH users as participants
+    // CRITICAL: Both users MUST be added for both to see the messages
+    // This is a common bug - forgetting to add both participants
     print('👥 Adding both participants to conversation');
     await supabase.from('conversation_participants').insert([
       {
         'conversation_id': conversationId,
-        'user_id': currentUserId,
+        'user_id': currentUserId,  // Current user
       },
       {
         'conversation_id': conversationId,
-        'user_id': otherUserId,
+        'user_id': otherUserId,  // Other user
       },
     ]);
 
@@ -79,12 +100,24 @@ class MessageService {
   }
 
   /// Send a message
+  /// 
+  /// This function sends a message in a conversation:
+  /// 1. Validates user is logged in
+  /// 2. Inserts the message into the messages table
+  /// 3. Updates the conversation's last_message_at timestamp
+  /// 
+  /// Parameters:
+  /// - conversationId: ID of the conversation to send message to
+  /// - content: The text content of the message
+  /// - imageUrl: (Optional) URL of an image attachment
+  /// - messageType: Type of message ('text' or 'image')
   Future<void> sendMessage({
     required String conversationId,
     required String content,
     String? imageUrl,
     String messageType = 'text',
   }) async {
+    // Validate user is logged in
     if (currentUserId == null) {
       throw Exception('User not logged in');
     }
@@ -93,11 +126,13 @@ class MessageService {
     print('📤 Content: $content');
     print('📤 Sender: $currentUserId');
 
+    // Insert message into messages table
+    // The RLS (Row Level Security) policies ensure only participants can send messages
     final result = await supabase.from('messages').insert({
-      'conversation_id': conversationId,
-      'sender_id': currentUserId,
-      'content': content,
-      'image_url': imageUrl,
+      'conversation_id': conversationId,  // Which conversation this message belongs to
+      'sender_id': currentUserId,  // Who sent the message
+      'content': content,  // The message text
+      'image_url': imageUrl,  // Optional image attachment
       'message_type': messageType,
     }).select();
 

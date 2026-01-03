@@ -11,25 +11,34 @@ class AuthService {
   Stream<AuthState> get authStateChanges => supabase.auth.onAuthStateChange;
 
   /// Sign up with email and password
+  /// 
+  /// Creates a new user account in Supabase Auth
+  /// 
+  /// Flow:
+  /// 1. Calls Supabase auth.signUp() to create auth user
+  /// 2. If email confirmation is disabled: Returns session immediately
+  /// 3. If email confirmation is enabled: User must verify email first
+  /// 
+  /// Returns: AuthResponse with user and session (session is null if email confirmation required)
   Future<AuthResponse> signUpWithEmail({
     required String email,
     required String password,
-    required String name,
   }) async {
     try {
       // Create user account with Supabase Auth
-      // The trigger will automatically create the user profile
+      // Supabase will send a confirmation email if enabled in settings
       final response = await supabase.auth.signUp(
         email: email,
         password: password,
-        data: {'name': name}, // Store name in user metadata
       );
 
       // Log response for debugging
+      // session will be null if email confirmation is required
       print('Signup response: ${response.user?.id}, session: ${response.session != null}');
 
       return response;
     } on AuthException catch (e) {
+      // Convert technical error messages to user-friendly ones
       print('AuthException: ${e.message}, code: ${e.statusCode}');
       throw _handleAuthException(e);
     } catch (e) {
@@ -39,18 +48,26 @@ class AuthService {
   }
 
   /// Sign in with email and password
+  /// 
+  /// Authenticates an existing user
+  /// 
+  /// Flow:
+  /// 1. Validates credentials with Supabase
+  /// 2. Returns session if successful
+  /// 3. Throws error if credentials are invalid or email not confirmed
   Future<AuthResponse> signInWithEmail({
     required String email,
     required String password,
   }) async {
     try {
-      // Authenticate with Supabase
+      // Authenticate with Supabase using password
       final response = await supabase.auth.signInWithPassword(
         email: email,
         password: password,
       );
       return response;
     } on AuthException catch (e) {
+      // Convert error to user-friendly message
       throw _handleAuthException(e);
     }
   }
