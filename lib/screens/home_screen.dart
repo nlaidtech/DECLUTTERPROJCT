@@ -71,15 +71,22 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
         actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 16),
-          
+          IconButton(
+            icon: const Icon(Icons.refresh, color: Colors.grey),
+            onPressed: () {
+              setState(() {}); // Trigger rebuild to refresh streams
+            },
           ),
+          const SizedBox(width: 8),
         ],
       ),
 
       // ---------------- BODY ----------------
-      body: SingleChildScrollView(
+      body: RefreshIndicator(
+        onRefresh: () async {
+          setState(() {}); // Trigger rebuild to refresh streams
+        },
+        child: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -358,6 +365,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
             const SizedBox(height: 120),
           ],
+        ),
         ),
       ),
 

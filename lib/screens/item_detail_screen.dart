@@ -54,6 +54,8 @@ class ItemDetailScreen extends StatefulWidget {
 class _ItemDetailScreenState extends State<ItemDetailScreen> {
   final FavoritesService _favoritesService = FavoritesService();
   int _currentImageIndex = 0;
+  bool _userExists = true;
+  bool _isCheckingUser = true;
   
   List<String> get _images => widget.imageUrls ?? [];
   
@@ -65,6 +67,36 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
     print('ItemDetailScreen - Image URLs: ${widget.imageUrls}');
     print('ItemDetailScreen - Number of images: ${_images.length}');
     print('ItemDetailScreen - Description: ${widget.itemDescription}');
+    _checkIfUserExists();
+  }
+
+  Future<void> _checkIfUserExists() async {
+    if (widget.userId == null) {
+      setState(() {
+        _userExists = false;
+        _isCheckingUser = false;
+      });
+      return;
+    }
+
+    try {
+      final response = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('id', widget.userId!)
+          .maybeSingle();
+      
+      setState(() {
+        _userExists = response != null;
+        _isCheckingUser = false;
+      });
+    } catch (e) {
+      print('Error checking user: $e');
+      setState(() {
+        _userExists = false;
+        _isCheckingUser = false;
+      });
+    }
   }
 
   void _showLocationDialog(BuildContext context, ThemeData theme) {
@@ -329,6 +361,47 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // Orphaned Post Warning Banner
+                      if (!_isCheckingUser && !_userExists)
+                        Container(
+                          margin: const EdgeInsets.only(bottom: 16),
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.orange[50],
+                            border: Border.all(color: Colors.orange[300]!),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(Icons.warning_amber_rounded, color: Colors.orange[700], size: 28),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Account No Longer Available',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.orange[900],
+                                        fontSize: 15,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      'This user account has been deleted. You cannot contact or message this user.',
+                                      style: TextStyle(
+                                        color: Colors.orange[800],
+                                        fontSize: 13,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+
                       // Title and Favorite
                       Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -567,7 +640,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                 child: SizedBox(
                   width: double.infinity,
                   child: ElevatedButton.icon(
-                    onPressed: () {
+                    onPressed: _userExists ? () {
                       // Open chat with item poster
                       Navigator.push(
                         context,
@@ -582,11 +655,20 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                           ),
                         ),
                       );
+                    } : () {
+                      // Show warning if user account is deleted
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Cannot message - this account no longer exists'),
+                          backgroundColor: Colors.orange,
+                          duration: Duration(seconds: 3),
+                        ),
+                      );
                     },
                     icon: const Icon(Icons.message_outlined),
-                    label: const Text('Message'),
+                    label: Text(_userExists ? 'Message' : 'Account Unavailable'),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: theme.primaryColor,
+                      backgroundColor: _userExists ? theme.primaryColor : Colors.grey,
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       elevation: 0,

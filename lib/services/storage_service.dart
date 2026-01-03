@@ -42,7 +42,12 @@ class StorageService {
     PlatformFile imageFile,
     String fileName,
   ) async {
+    // Refresh session to make sure user is logged in
+    await supabase.auth.refreshSession();
+    
     if (currentUserId == null) {
+      print('ERROR: User not logged in after session refresh');
+      print('Current session: ${supabase.auth.currentSession}');
       throw Exception('User not logged in');
     }
 
@@ -93,7 +98,12 @@ class StorageService {
 
   /// Upload a profile picture to Supabase Storage
   Future<String> uploadProfilePicture(PlatformFile imageFile) async {
+    // Refresh session to make sure user is logged in
+    await supabase.auth.refreshSession();
+    
     if (currentUserId == null) {
+      print('ERROR: User not logged in after session refresh');
+      print('Current session: ${supabase.auth.currentSession}');
       throw Exception('User not logged in');
     }
 
@@ -119,7 +129,8 @@ class StorageService {
           ? _compressImageIsolate(imageBytes)
           : await compute(_compressImageIsolate, imageBytes);
 
-      await supabase.storage.from('avatars').uploadBinary(
+      // Use post-images bucket (same as posts) since avatars bucket may not exist
+      await supabase.storage.from('post-images').uploadBinary(
             path,
             compressedBytes,
             fileOptions: const FileOptions(
@@ -128,7 +139,7 @@ class StorageService {
             ),
           );
 
-      final publicUrl = supabase.storage.from('avatars').getPublicUrl(path);
+      final publicUrl = supabase.storage.from('post-images').getPublicUrl(path);
 
       print('Profile picture uploaded successfully: $publicUrl');
       return publicUrl;

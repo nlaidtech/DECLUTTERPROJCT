@@ -216,15 +216,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       Navigator.pushNamed(context, '/activity-history');
                     },
                   ),
-                  _buildDivider(),
-                  _MenuTile(
-                    icon: Icons.notifications_outlined,
-                    title: 'Notifications',
-                    subtitle: 'Manage notification preferences',
-                    onTap: () {
-                      Navigator.pushNamed(context, '/notifications');
-                    },
-                  ),
                 ],
               ),
             ),

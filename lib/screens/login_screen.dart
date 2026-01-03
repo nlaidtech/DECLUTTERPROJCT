@@ -42,6 +42,13 @@ class _LoginScreenState extends State<LoginScreen> {
       return;
     }
 
+    // Validate email format
+    final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+    if (!emailRegex.hasMatch(_emailController.text.trim())) {
+      _showSnackBar('Please enter a valid email address (e.g., user@example.com)');
+      return;
+    }
+
     // Show loading state
     setState(() => _isLoading = true);
 
@@ -61,8 +68,55 @@ class _LoginScreenState extends State<LoginScreen> {
     } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);
-        _showSnackBar(e.toString());
+        final errorMessage = e.toString();
+        _showSnackBar(errorMessage);
+        
+        // Show resend verification option if email not verified
+        if (errorMessage.contains('verify your email')) {
+          _showResendVerificationDialog();
+        }
       }
+    }
+  }
+
+  // Show dialog to resend verification email
+  void _showResendVerificationDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Email Not Verified'),
+        content: const Text(
+          'Please check your email for the verification link. Would you like us to resend it?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              await _resendVerification();
+            },
+            child: const Text('Resend'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Resend verification email
+  Future<void> _resendVerification() async {
+    if (_emailController.text.isEmpty) {
+      _showSnackBar('Please enter your email address');
+      return;
+    }
+
+    try {
+      await _authService.resendVerificationEmail(_emailController.text.trim());
+      _showSnackBar('Verification email sent! Please check your inbox.');
+    } catch (e) {
+      _showSnackBar(e.toString());
     }
   }
 
@@ -120,34 +174,17 @@ class _LoginScreenState extends State<LoginScreen> {
               const SizedBox(height: 20),
               _buildPasswordField(),
 
-              // Remember me checkbox and Forgot password link
+              // Remember me checkbox
               const SizedBox(height: 16),
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   // Remember me checkbox
-                  Row(
-                    children: [
-                      Checkbox(
-                        value: true,
-                        onChanged: (_) {},
-                        activeColor: Theme.of(context).primaryColor,
-                      ),
-                      const Text('Remember me', style: TextStyle(fontSize: 13)),
-                    ],
+                  Checkbox(
+                    value: true,
+                    onChanged: (_) {},
+                    activeColor: Theme.of(context).primaryColor,
                   ),
-                  // Forgot password link - Navigates to forgot password screen
-                  TextButton(
-                    onPressed: () =>
-                        Navigator.pushNamed(context, '/forgot-password'),
-                    child: Text(
-                      'Forgot Password',
-                      style: TextStyle(
-                        color: Theme.of(context).primaryColor,
-                        fontSize: 13,
-                      ),
-                    ),
-                  ),
+                  const Text('Remember me', style: TextStyle(fontSize: 13)),
                 ],
               ),
 

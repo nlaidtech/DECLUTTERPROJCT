@@ -48,6 +48,13 @@ class _SignUpScreenState extends State<SignUpScreen> {
       return;
     }
 
+    // Validate email format
+    final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+    if (!emailRegex.hasMatch(_emailController.text.trim())) {
+      _showSnackBar('Please enter a valid email address (e.g., user@example.com)');
+      return;
+    }
+
     // Validate passwords match
     if (_passwordController.text != _confirmPasswordController.text) {
       _showSnackBar('Passwords do not match');
@@ -65,7 +72,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
     try {
       // Create account and save to database
-      await _authService.signUpWithEmail(
+      final response = await _authService.signUpWithEmail(
         email: _emailController.text.trim(),
         password: _passwordController.text,
         name: _nameController.text.trim(),
@@ -73,6 +80,18 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
       if (mounted) {
         setState(() => _isLoading = false);
+        
+        // Check if email confirmation is required
+        if (response.session == null) {
+          _showSnackBar('Please check your email to confirm your account before logging in.');
+          Future.delayed(const Duration(seconds: 2), () {
+            if (mounted) {
+              widget.onSwitchToLogin();
+            }
+          });
+          return;
+        }
+        
         _showSnackBar('Account created successfully! Please complete your profile.');
         
         // Navigate to edit profile screen to complete profile setup

@@ -20,30 +20,25 @@ class LocationPickerMap extends StatefulWidget {
 
 class _LocationPickerMapState extends State<LocationPickerMap> {
   final MapController? _mapController = MapController();
-  final TextEditingController _searchController = TextEditingController();
-  LatLng _selectedPosition = LatLng(7.3697, 125.6517); // Default: Panabo City
+  LatLng _selectedPosition = LatLng(7.4474, 125.8078); // Default: Tagum City
   String _selectedAddress = '';
   bool _isLoading = false;
-  bool _isSearching = false;
   final LocationService _locationService = LocationService();
 
   @override
   void initState() {
     super.initState();
-    if (widget.initialAddress != null) {
-      _searchController.text = widget.initialAddress!;
-    }
     if (widget.initialPosition != null) {
       _selectedPosition = widget.initialPosition!;
       _getAddressFromPosition(widget.initialPosition!);
     } else {
-      _getCurrentLocation();
+      // Start at Tagum City default, don't auto-fetch current location
+      _getAddressFromPosition(_selectedPosition);
     }
   }
 
   @override
   void dispose() {
-    _searchController.dispose();
     _mapController?.dispose();
     super.dispose();
   }
@@ -100,79 +95,6 @@ class _LocationPickerMapState extends State<LocationPickerMap> {
     _getAddressFromPosition(position);
   }
 
-  Future<void> _searchAddress() async {
-    final query = _searchController.text.trim();
-    if (query.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter an address')),
-      );
-      return;
-    }
-
-    setState(() => _isSearching = true);
-
-    try {
-      // Try to search with more context if it's a short query
-      String searchQuery = query;
-      if (!query.toLowerCase().contains('philippines') && 
-          !query.toLowerCase().contains('davao') &&
-          query.split(',').length == 1) {
-        // Add Philippines context for better results
-        searchQuery = '$query, Davao del Norte, Philippines';
-      }
-      
-      final location = await _locationService.getCoordinatesFromAddress(searchQuery);
-      
-      if (location != null) {
-        final newPosition = LatLng(location.latitude, location.longitude);
-        
-        setState(() {
-          _selectedPosition = newPosition;
-          _isSearching = false;
-        });
-        
-        _mapController?.move(newPosition, 15);
-        await _getAddressFromPosition(newPosition);
-        
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Location found!'),
-              backgroundColor: Color(0xFF4CAF50),
-            ),
-          );
-        }
-      } else {
-        setState(() => _isSearching = false);
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Location not found. Try: "$query, Davao del Norte, Philippines"'),
-              backgroundColor: Colors.orange,
-              duration: const Duration(seconds: 4),
-            ),
-          );
-        }
-      }
-    } catch (e) {
-      setState(() => _isSearching = false);
-      if (mounted) {
-        String errorMessage = 'Location not found';
-        if (e.toString().contains('null')) {
-          errorMessage = 'Please enter a more specific address\n(e.g., "Panabo City, Davao del Norte")';
-        }
-        
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(errorMessage),
-            backgroundColor: Colors.orange,
-            duration: const Duration(seconds: 4),
-          ),
-        );
-      }
-    }
-  }
-
   void _confirmLocation() {
     Navigator.pop(context, {
       'position': _selectedPosition,
@@ -225,7 +147,7 @@ class _LocationPickerMapState extends State<LocationPickerMap> {
             ],
           ),
 
-          // Search and Address Display Cards
+          // Address Display Card
           Positioned(
             top: 16,
             left: 16,
@@ -233,36 +155,6 @@ class _LocationPickerMapState extends State<LocationPickerMap> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Search Bar
-                Card(
-                  elevation: 4,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            controller: _searchController,
-                            decoration: const InputDecoration(
-                              hintText: 'Search address (e.g., Panabo City)',
-                              border: InputBorder.none,
-                              hintStyle: TextStyle(fontSize: 14),
-                              prefixIcon: Icon(Icons.search, size: 20),
-                            ),
-                            style: const TextStyle(fontSize: 14),
-                            onSubmitted: (_) => _searchAddress(),
-                          ),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.arrow_forward, color: Color(0xFF4CAF50)),
-                          onPressed: _isSearching ? null : _searchAddress,
-                          tooltip: 'Search',
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 8),
                 // Selected Location Display
                 Card(
                   elevation: 4,
@@ -307,7 +199,7 @@ class _LocationPickerMapState extends State<LocationPickerMap> {
           ),
 
           // Loading Indicator
-          if (_isLoading || _isSearching)
+          if (_isLoading)
             Container(
               color: Colors.black26,
               child: Center(
@@ -316,9 +208,9 @@ class _LocationPickerMapState extends State<LocationPickerMap> {
                   children: [
                     const CircularProgressIndicator(),
                     const SizedBox(height: 16),
-                    Text(
-                      _isSearching ? 'Searching...' : 'Loading...',
-                      style: const TextStyle(color: Colors.white),
+                    const Text(
+                      'Loading...',
+                      style: TextStyle(color: Colors.white),
                     ),
                   ],
                 ),

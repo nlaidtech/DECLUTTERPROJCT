@@ -49,5 +49,7 @@
 	<string>This app needs access to your location to show nearby items.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
 	<string>This app needs access to your location to show nearby items.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>This app needs access to your photo library to upload profile pictures and post images.</string>
 </dict>
 </plist>

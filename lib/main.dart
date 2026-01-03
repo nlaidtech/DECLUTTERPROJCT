@@ -5,7 +5,6 @@ import 'package:timeago/timeago.dart' as timeago;
 import 'theme.dart';
 import 'screens/login_screen.dart';
 import 'screens/signup_screen.dart';
-import 'screens/forgot_password_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/saved_screen.dart';
 import 'screens/conversations_screen.dart';
@@ -13,7 +12,6 @@ import 'screens/profile_screen.dart';
 import 'screens/search_screen.dart';
 import 'screens/edit_profile_screen.dart';
 import 'screens/my_posts_screen.dart';
-import 'screens/notifications_screen.dart';
 import 'screens/activity_history_screen.dart';
 import 'screens/help_support_screen.dart';
 import 'screens/privacy_policy_screen.dart';
@@ -36,6 +34,9 @@ void main() async {
   await Supabase.initialize(
     url: dotenv.env['SUPABASE_URL']!,
     anonKey: dotenv.env['SUPABASE_ANON_KEY']!,
+    authOptions: const FlutterAuthClientOptions(
+      authFlowType: AuthFlowType.pkce,
+    ),
   );
   
   runApp(const MyApp());
@@ -76,9 +77,6 @@ class _MyAppState extends State<MyApp> {
         '/signup': (context) => SignUpScreen(
               onSwitchToLogin: () => Navigator.pop(context),
             ),
-        '/forgot-password': (context) => ForgotPasswordScreen(
-              onBackToLogin: () => Navigator.pop(context),
-            ),
         '/home': (context) => const HomeScreen(),
         '/saved': (context) => SavedScreen(favoritesService: FavoritesService()),
         '/message': (context) => const ConversationsScreen(),
@@ -88,7 +86,6 @@ class _MyAppState extends State<MyApp> {
         '/edit_profile': (context) => const EditProfileScreen(),
         '/settings': (context) => const SettingsScreen(),
         '/my-posts': (context) => const MyPostsScreen(),
-        '/notifications': (context) => const NotificationsScreen(),
         '/activity-history': (context) => const ActivityHistoryScreen(),
         '/help-support': (context) => const HelpSupportScreen(),
         '/privacy-policy': (context) => const PrivacyPolicyScreen(),

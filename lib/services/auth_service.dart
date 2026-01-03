@@ -69,7 +69,7 @@ class AuthService {
 
     try {
       // Delete user profile and related data (CASCADE will handle posts, messages, etc.)
-      await supabase.from('profiles').delete().eq('id', userId);
+      await supabase.from('users').delete().eq('id', userId);
       
       // Delete the auth user (requires admin privileges or RPC function)
       // Note: This requires a database function to be set up in Supabase
@@ -93,8 +93,22 @@ class AuthService {
     }
   }
 
+  /// Resend verification email
+  Future<void> resendVerificationEmail(String email) async {
+    try {
+      await supabase.auth.resend(
+        type: OtpType.signup,
+        email: email,
+      );
+    } on AuthException catch (e) {
+      throw _handleAuthException(e);
+    }
+  }
+
   /// Get user profile from database
   Future<Map<String, dynamic>?> getUserProfile(String userId) async {
+    // Don't refresh session here if it was already refreshed by caller
+    // to avoid double refresh which can cause issues
     try {
       final response = await supabase
           .from('profiles')
@@ -110,6 +124,9 @@ class AuthService {
 
   /// Update user profile
   Future<void> updateUserProfile(String userId, Map<String, dynamic> updates) async {
+    // Refresh session to ensure user is authenticated
+    await supabase.auth.refreshSession();
+    
     try {
       // First check if profile exists
       final existing = await getUserProfile(userId);

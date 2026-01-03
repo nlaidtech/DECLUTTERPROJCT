@@ -16,11 +16,11 @@ class DatabaseService {
     String? photoUrl,
     String? location,
   }) async {
+    // Insert into users table (basic info only)
     await supabase.from('users').upsert({
       'id': userId,
       'email': email,
       'name': displayName ?? email.split('@')[0],
-      // Add location field if needed in your users table
     });
   }
 
@@ -47,8 +47,31 @@ class DatabaseService {
     double? latitude,
     double? longitude,
   }) async {
+    // Refresh session to ensure user is authenticated
+    await supabase.auth.refreshSession();
+    
     if (currentUserId == null) {
+      print('ERROR: User not logged in when creating post');
+      print('Current session: ${supabase.auth.currentSession}');
       throw Exception('User not logged in');
+    }
+
+    // Ensure user exists in users table before creating post
+    final userExists = await supabase
+        .from('users')
+        .select('id')
+        .eq('id', currentUserId!)
+        .maybeSingle();
+    
+    if (userExists == null) {
+      // Create user if it doesn't exist
+      final user = supabase.auth.currentUser;
+      await saveUserProfile(
+        userId: currentUserId!,
+        email: user?.email ?? '',
+        displayName: user?.userMetadata?['name'] ?? user?.email?.split('@')[0],
+      );
+      print('Created missing user record for: $currentUserId');
     }
 
     final response = await supabase.from('posts').insert({

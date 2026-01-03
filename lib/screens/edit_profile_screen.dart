@@ -66,15 +66,40 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   }
 
   Future<void> _loadUserProfile() async {
-    if (_currentUser == null) {
-      setState(() => _isLoading = false);
-      return;
-    }
-
     setState(() => _isLoading = true);
-
+    
     try {
+      // Refresh session to ensure user is loaded (especially after signup)
+      print('Refreshing session...');
+      await supabase.auth.refreshSession();
+      _currentUser = supabase.auth.currentUser;
+      print('Current user after refresh: ${_currentUser?.id}');
+      
+      if (_currentUser == null) {
+        print('No user found after session refresh - session might be missing');
+        // Try to get session one more time with a delay
+        await Future.delayed(const Duration(milliseconds: 500));
+        await supabase.auth.refreshSession();
+        _currentUser = supabase.auth.currentUser;
+        
+        if (_currentUser == null) {
+          print('Still no user - redirecting to login');
+          if (mounted) {
+            setState(() => _isLoading = false);
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Session expired. Please login again.'),
+                backgroundColor: Colors.red,
+              ),
+            );
+            Navigator.pushReplacementNamed(context, '/welcome');
+          }
+          return;
+        }
+      }
+
       // Load user profile from database
+      print('Loading user profile for: ${_currentUser!.id}');
       final profile = await _authService.getUserProfile(_currentUser!.id);
       
       if (profile != null && mounted) {
@@ -82,7 +107,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           _nameController.text = profile['display_name'] ?? _currentUser?.userMetadata?['name'] ?? '';
           _bioController.text = profile['bio'] ?? '';
           _locationController.text = profile['location'] ?? 'PANABO';
-          _profilePhotoUrl = profile['photo_url'];
+          _profilePhotoUrl = profile['avatar_url'];
           if (profile['birthday'] != null) {
             _birthday = DateTime.parse(profile['birthday']);
           }
@@ -97,6 +122,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         });
       }
     } catch (e) {
+      print('Error loading profile: $e');
       if (mounted) {
         setState(() => _isLoading = false);
         _showSnackBar('Error loading profile: ${e.toString()}');
@@ -115,7 +141,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         'display_name': _nameController.text.trim(),
         'bio': _bioController.text.trim(),
         'location': _locationController.text.trim(),
-        'photo_url': _profilePhotoUrl,
+        'avatar_url': _profilePhotoUrl,
         'birthday': _birthday?.toIso8601String(),
         'updated_at': DateTime.now().toIso8601String(),
       };
