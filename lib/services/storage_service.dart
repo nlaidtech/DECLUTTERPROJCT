@@ -7,17 +7,32 @@ import 'package:image/image.dart' as img;
 import '../main.dart';
 
 /// Compress image in separate isolate (doesn't block UI)
+/// 
+/// This function runs in a separate thread (isolate) to avoid freezing the UI
+/// while compressing large images.
+/// 
+/// Process:
+/// 1. Decodes the image bytes into an image object
+/// 2. Resizes if width > 600px (keeps aspect ratio)
+/// 3. Compresses to JPEG with 60% quality
+/// 4. Returns compressed bytes
+/// 
+/// Why this matters: Large images (2-3MB) can freeze the app for seconds
+/// Running in isolate keeps UI smooth during compression
 Uint8List _compressImageIsolate(Uint8List imageBytes) {
   try {
+    // Decode the image from bytes
     final image = img.decodeImage(imageBytes);
     if (image == null) return imageBytes;
 
-    // Very aggressive: max 600px width
+    // Resize if too wide (600px is good for mobile screens)
+    // This dramatically reduces file size for photos from cameras
     final resized = image.width > 600
         ? img.copyResize(image, width: 600)
         : image;
 
-    // Lower quality: 60%
+    // Compress to JPEG with 60% quality
+    // 60% is a sweet spot: good quality, much smaller size
     final compressed = img.encodeJpg(resized, quality: 60);
 
     print(
@@ -26,7 +41,7 @@ Uint8List _compressImageIsolate(Uint8List imageBytes) {
     return Uint8List.fromList(compressed);
   } catch (e) {
     print('Error compressing: $e');
-    return imageBytes;
+    return imageBytes; // Return original if compression fails
   }
 }
 
@@ -37,12 +52,30 @@ class StorageService {
   String? get currentUserId => supabase.auth.currentUser?.id;
 
   /// Upload a post image to Supabase Storage
-  /// Returns the public URL of the uploaded image
+  /// 
+  /// This function handles the complete image upload process:
+  /// 1. Validates user is logged in
+  /// 2. Gets image bytes (different methods for web vs mobile)
+  /// 3. Compresses the image to reduce file size and upload time
+  /// 4. Uploads to Supabase Storage bucket 'post-images'
+  /// 5. Returns the public URL where the image can be accessed
+  /// 
+  /// Why compression: Reduces storage costs and makes app faster
+  /// - Original photos from phone cameras can be 2-5MB
+  /// - After compression: 100-300KB
+  /// - Faster uploads, less mobile data usage
+  /// 
+  /// Parameters:
+  /// - imageFile: The selected image file from file picker
+  /// - fileName: Unique name for the file (usually includes timestamp)
+  /// 
+  /// Returns: Public URL of the uploaded image
   Future<String> uploadPostImage(
     PlatformFile imageFile,
     String fileName,
   ) async {
-    // Refresh session to make sure user is logged in
+    // Step 1: Ensure user is authenticated
+    // Storage operations require authentication
     await supabase.auth.refreshSession();
     
     if (currentUserId == null) {
@@ -52,12 +85,16 @@ class StorageService {
     }
 
     try {
-      // Create a path for the file
+      // Step 2: Create storage path
+      // Format: posts/{userId}/{fileName}.jpg
+      // This organizes files by user for easy cleanup later
       final path = 'posts/$currentUserId/$fileName.jpg';
 
       Uint8List imageBytes;
 
-      // Get image bytes based on platform
+      // Step 3: Get image bytes based on platform
+      // Web: uses bytes directly from memory
+      // Mobile/Desktop: reads from file path
       if (kIsWeb) {
         if (imageFile.bytes == null) {
           throw Exception('Image bytes are null');
@@ -67,25 +104,31 @@ class StorageService {
         if (imageFile.path == null) {
           throw Exception('Image path is null');
         }
+        // Read file from disk
         imageBytes = await File(imageFile.path!).readAsBytes();
       }
 
-      // Compress image in background isolate (doesn't freeze UI)
+      // Step 4: Compress image in background thread
+      // Web doesn't support isolates, so compression runs on main thread
+      // Mobile/Desktop: runs in separate isolate to keep UI smooth
       final compressedBytes = kIsWeb
-          ? _compressImageIsolate(imageBytes) // Web doesn't support isolates
-          : await compute(_compressImageIsolate, imageBytes);
+          ? _compressImageIsolate(imageBytes) // Web: direct call
+          : await compute(_compressImageIsolate, imageBytes); // Mobile: isolate
 
-      // Upload to Supabase Storage
+      // Step 5: Upload to Supabase Storage
+      // - Bucket: 'post-images' (must exist in Supabase dashboard)
+      // - upsert: true allows overwriting if file exists
       await supabase.storage.from('post-images').uploadBinary(
             path,
             compressedBytes,
             fileOptions: const FileOptions(
               contentType: 'image/jpeg',
-              upsert: true,
+              upsert: true,  // Allow overwriting existing files
             ),
           );
 
-      // Get the public URL
+      // Step 6: Get public URL
+      // This URL can be accessed by anyone without authentication
       final publicUrl = supabase.storage.from('post-images').getPublicUrl(path);
 
       print('Image uploaded successfully: $publicUrl');
